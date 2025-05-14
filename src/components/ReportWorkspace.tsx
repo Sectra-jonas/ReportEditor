@@ -20,7 +20,7 @@ const ReportWorkspace = () => {
         // Append final transcript with a space
         const { from, to } = editor.state.selection;
         editor.chain().focus().insertContentAt({ from, to }, transcript + " ").run();
-        lastInsertedTextRef.current = null; 
+        lastInsertedTextRef.current = null;
       } else {
         // Interim results can be complex to handle perfectly without specific markers.
         // A common approach is to show them in a temporary UI element.
@@ -31,7 +31,7 @@ const ReportWorkspace = () => {
       }
     }
   };
-  
+
   const handleVoiceEnd = () => {
     // Voice recognition ended, already handled by isListening state change
   };
@@ -48,7 +48,7 @@ const ReportWorkspace = () => {
 
   // Initialize with a new blank report if none exists on initial load and editor is ready
   useEffect(() => {
-    if (!currentReport && editor) { 
+    if (!currentReport && editor) {
        createNewReport();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,7 +59,7 @@ const ReportWorkspace = () => {
         // Check if the update was programmatic or user-initiated.
         // For simplicity, any update while editable is considered to make it dirty.
         // This check avoids setting dirty if content is set programmatically when editor is not editable.
-        if (!isDirty) setIsDirty(true); 
+        if (!isDirty) setIsDirty(true);
     }
   };
 
@@ -68,11 +68,11 @@ const ReportWorkspace = () => {
       <MainToolbar />
       <div className="flex flex-col flex-grow p-4 md:p-6 lg:p-8 overflow-hidden">
         <div className="flex flex-col flex-grow border border-input rounded-lg shadow-xl bg-card">
-          <EditorToolbar 
-            editor={editor} 
-            isVoiceActive={isListening} 
-            onToggleVoice={isSupported && editor?.isEditable ? toggleListening : undefined} 
-            disableControls={!editor?.isEditable} // Toolbar controls depend on editor's actual editable state
+          <EditorToolbar
+            editor={editor}
+            isVoiceActive={isListening}
+            onToggleVoice={isSupported && editor?.isEditable ? toggleListening : undefined}
+            disableControls={!currentReport} // Toolbar controls depend on whether a report is active
           />
           <div className="flex-grow h-full overflow-y-auto">
             <RichTextEditor
@@ -81,13 +81,13 @@ const ReportWorkspace = () => {
               onUpdate={handleEditorUpdate}
               editable={!!currentReport} // Editor component is editable if a report is loaded
               placeholder="Start your radiology report here... Use [FieldName] or [OptionA|OptionB] for template fields."
-              className="min-h-[calc(100vh-220px)] rounded-t-none" 
+              className="min-h-[calc(100vh-220px)] rounded-t-none"
             />
           </div>
         </div>
       </div>
        {isSupported && isListening && (
-        <div 
+        <div
             className="fixed bottom-4 right-4 bg-destructive text-destructive-foreground p-3 rounded-full shadow-lg text-sm animate-pulse z-50"
             aria-live="assertive"
             aria-atomic="true"

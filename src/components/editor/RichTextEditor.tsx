@@ -12,7 +12,7 @@ import { useEffect } from 'react';
 // Custom Extensions
 import { FieldNameNode } from './extensions/FieldNameNode';
 import { MultiOptionNode } from './extensions/MultiOptionNode';
-import { MultiOptionNodeView } from './nodeviews/MultiOptionNodeView'; // Important for ReactNodeViewRenderer
+// import { MultiOptionNodeView } from './nodeviews/MultiOptionNodeView'; // Important for ReactNodeViewRenderer - MultiOptionNode handles its own NodeView
 import { TabFocusNavigationExtension } from './extensions/TabFocusNavigationExtension';
 
 
@@ -37,12 +37,7 @@ const RichTextEditor = ({
     extensions: [
       StarterKit.configure({
         heading: false, // Use custom Heading extension for specific levels
-        // Disable default Tab behavior if it conflicts with custom navigation
-        history: {
-          // depth: 100, // example
-        },
-        // Consider disabling default keyboard shortcuts for Tab if they interfere.
-        // However, TabFocusNavigationExtension should take precedence if it returns true.
+        history: {},
       }),
       Underline,
       Placeholder.configure({
@@ -51,15 +46,14 @@ const RichTextEditor = ({
       Heading.configure({
         levels: [1, 2, 3],
       }),
-      FieldNameNode, // Add custom FieldNameNode
-      MultiOptionNode.configure({ // MultiOptionNode requires its NodeView
+      FieldNameNode,
+      MultiOptionNode.configure({
         // NodeView is configured directly in MultiOptionNode.ts via addNodeView
-        // and ReactNodeViewRenderer(MultiOptionNodeView)
       }),
-      TabFocusNavigationExtension, // Add Tab navigation
+      TabFocusNavigationExtension,
     ],
-    content: content,
-    editable: editable,
+    content: content, // Initial content
+    editable: editable, // This prop controls Tiptap's editable state
     onUpdate: (props) => {
       onUpdate?.(props);
     },
@@ -67,15 +61,6 @@ const RichTextEditor = ({
       attributes: {
         class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl dark:prose-invert focus:outline-none w-full h-full p-4 rounded-b-md shadow-sm bg-card text-card-foreground border-t-0 border border-input ${className}`,
       },
-      // Handle Tab key press at editorProps level if extension doesn't cover all cases or for debugging
-      // handleKeyDown: (view, event) => {
-      //   if (event.key === 'Tab') {
-      //     // console.log("Tab pressed in editorProps");
-      //     // If TabFocusNavigationExtension handles it, it should return true.
-      //     // If it returns false, default browser behavior (focus next element) might occur.
-      //   }
-      //   return false; // Return false to allow other handlers (like extensions)
-      // },
     },
   });
 
@@ -89,26 +74,48 @@ const RichTextEditor = ({
       }
     };
   }, [editor, setEditorInstance]);
-  
+
   useEffect(() => {
-    if (editor && content && editable) { // Only set content if editable, to prevent resetting on readonly view
-        const currentHTML = editor.getHTML();
-        // Simple check, might need a more robust diff if content is complex JSON
-        if (typeof content === 'string' && currentHTML !== content) {
-            editor.commands.setContent(content, false);
-        } else if (typeof content !== 'string') {
-            // For JSON content, comparison is harder. Usually, we trust it if `content` prop changes.
-            editor.commands.setContent(content, false);
-        }
-    } else if (editor && !content && editable) {
-      editor.commands.clearContent(false);
+    if (!editor) return;
+
+    // This effect ensures the editor's content reflects the 'content' prop.
+    // The 'editable' prop passed to useEditor() handles interactivity.
+    // This focuses on visual synchronization.
+
+    const currentEditorHTML = editor.getHTML();
+    const currentEditorJSON = editor.getJSON(); // For comparison if content is JSON
+
+    let newContentIsDifferent = false;
+
+    if (typeof content === 'string') {
+      if (currentEditorHTML !== content) {
+        newContentIsDifferent = true;
+      }
+    } else if (content && typeof content === 'object') { // TipTap JSON object
+      if (JSON.stringify(currentEditorJSON) !== JSON.stringify(content)) {
+        newContentIsDifferent = true;
+      }
+    } else if (!content) { // content is null, undefined, or empty string
+      if (currentEditorHTML !== '' && currentEditorHTML !== '<p></p>') { // Avoid redundant clear
+        newContentIsDifferent = true; // Treat as different if editor is not "empty"
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content, editor]); // Removed 'editable' from deps to allow content update even if editable changes (though less common)
+
+    if (newContentIsDifferent) {
+      if (content) {
+        editor.commands.setContent(content, false); // emitUpdate: false
+      } else {
+        editor.commands.clearContent(false); // emitUpdate: false
+      }
+    }
+  // The 'editable' prop directly controls useEditor's behavior.
+  // This effect syncs content based on the 'content' prop itself.
+  // If 'editable' changes, useEditor reconfigures; this effect ensures content consistency.
+  }, [content, editor, editable]); // 'editable' is included as changes to it might imply content should be re-evaluated/set,
+                                   // even if useEditor itself handles the interactive state.
 
 
   return <EditorContent editor={editor} className="h-full flex-grow" />;
 };
 
 export default RichTextEditor;
-
