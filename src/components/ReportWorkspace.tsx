@@ -17,23 +17,17 @@ const ReportWorkspace = () => {
   const handleVoiceResult = (transcript: string, isFinal: boolean) => {
     if (editor && editor.isEditable) {
       if (isFinal) {
-        // Append final transcript with a space
         const { from, to } = editor.state.selection;
         editor.chain().focus().insertContentAt({ from, to }, transcript + " ").run();
         lastInsertedTextRef.current = null;
       } else {
-        // Interim results can be complex to handle perfectly without specific markers.
-        // A common approach is to show them in a temporary UI element.
-        // For now, we'll avoid inserting interim results directly into the editor
-        // to prevent text jumping or overwriting issues.
-        // console.log("Interim transcript:", transcript);
-        // lastInsertedTextRef.current = transcript; // Could be used for more advanced replacement later
+        // Interim results handled by visual indicator
       }
     }
   };
 
   const handleVoiceEnd = () => {
-    // Voice recognition ended, already handled by isListening state change
+    // Handled by isListening state change
   };
 
   const handleVoiceError = (error: any) => {
@@ -46,7 +40,6 @@ const ReportWorkspace = () => {
     onError: handleVoiceError,
   });
 
-  // Initialize with a new blank report if none exists on initial load and editor is ready
   useEffect(() => {
     if (!currentReport && editor) {
        createNewReport();
@@ -55,10 +48,7 @@ const ReportWorkspace = () => {
   }, [editor]); // Depend on editor initialization, createNewReport is memoized
 
   const handleEditorUpdate = () => {
-    if (editor && editor.isEditable) { // Only set dirty if editor is editable
-        // Check if the update was programmatic or user-initiated.
-        // For simplicity, any update while editable is considered to make it dirty.
-        // This check avoids setting dirty if content is set programmatically when editor is not editable.
+    if (editor && editor.isEditable) {
         if (!isDirty) setIsDirty(true);
     }
   };
@@ -72,14 +62,15 @@ const ReportWorkspace = () => {
             editor={editor}
             isVoiceActive={isListening}
             onToggleVoice={isSupported && editor?.isEditable ? toggleListening : undefined}
-            disableControls={!currentReport} // Toolbar controls depend on whether a report is active
+            disableControls={!currentReport} 
           />
           <div className="flex-grow h-full overflow-y-auto">
             <RichTextEditor
+              key={currentReport ? currentReport.id : 'no-report'} // Key change to force remount
               content={currentReport?.content || ''}
               setEditorInstance={setEditor}
               onUpdate={handleEditorUpdate}
-              editable={!!currentReport} // Editor component is editable if a report is loaded
+              editable={!!currentReport} 
               placeholder="Start your radiology report here... Use [FieldName] or [OptionA|OptionB] for template fields."
               className="min-h-[calc(100vh-220px)] rounded-t-none"
             />
