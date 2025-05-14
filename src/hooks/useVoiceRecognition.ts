@@ -48,7 +48,6 @@ const useVoiceRecognition = ({ onResult, onEnd, onError }: UseVoiceRecognitionPr
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognitionAPI) {
       setIsSupported(true);
-      // Initialize recognitionRef only once or if it's null
       if (!recognitionRef.current) {
         recognitionRef.current = new (SpeechRecognitionAPI as any)();
       }
@@ -59,7 +58,6 @@ const useVoiceRecognition = ({ onResult, onEnd, onError }: UseVoiceRecognitionPr
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        // Detach previous handlers before attaching new ones to prevent multiple listeners
         recognition.onresult = null;
         recognition.onend = null;
         recognition.onerror = null;
@@ -84,34 +82,52 @@ const useVoiceRecognition = ({ onResult, onEnd, onError }: UseVoiceRecognitionPr
         };
 
         recognition.onerror = (event: any /* SpeechRecognitionErrorEvent */) => {
-          console.error('Speech recognition error', event.error);
-          // toast({ title: "Voice Error", description: `Speech recognition error: ${event.error}`, variant: "destructive" });
-          // The onError callback prop will be called, which in ReportWorkspace already shows a toast.
-          setIsListening(false);
-          onError?.(event.error);
+          if (event.error === 'aborted') {
+            // "aborted" is a common event when recognition is stopped, especially by .abort()
+            // or when the microphone permission is denied after starting.
+            // We don't usually need to treat this as a user-facing error if it's just a stop.
+            // The onend event will handle setting isListening to false.
+            console.info('Speech recognition aborted (often normal during stop/cleanup or permission changes). Message:', event.message);
+            // If isListening is true, it means onend hasn't fired yet or failed to.
+            // This can happen if permission is revoked mid-recognition.
+            if (isListening) {
+              setIsListening(false);
+            }
+            // Optionally, still call onError if there's a specific message that indicates a problem
+            // For example, if event.message indicates a permission issue not caught elsewhere.
+            // onError?.(new Error(`Speech recognition aborted: ${event.message || event.error}`));
+          } else {
+            console.error('Speech recognition error:', event.error, event.message);
+            // For other errors, call the onError prop and ensure listening state is false.
+            // The `onend` event should also fire after an error, which also sets isListening to false.
+            // However, to be safe, we can set it here too.
+            if (isListening) { // Check to avoid unnecessary state update if already false
+                setIsListening(false);
+            }
+            onError?.(event.error);
+          }
         };
       }
     } else {
       setIsSupported(false);
-      // Avoid toast during initial render or if already handled by parent
-      // toast({ title: "Voice Input Not Supported", description: "Your browser does not support voice recognition.", variant: "destructive" });
       if (onError) {
         onError(new Error("Voice input not supported by the browser."));
       }
     }
 
-    // Cleanup function: Stop recognition if it's active when the component unmounts or dependencies change significantly
     return () => {
-      if (recognitionRef.current && isListening) { // Only abort if it was actually listening
+      if (recognitionRef.current && isListening) { 
         recognitionRef.current.abort();
-        setIsListening(false);
+        // onend handler (which calls setIsListening(false)) should be triggered by abort.
+        // If not, setIsListening(false) directly below might be needed, but could cause issues if onend *also* fires.
+        // For now, rely on onend.
       }
     };
-  }, [onResult, onEnd, onError, isListening]); // Added isListening to dependencies to manage abort correctly
+  }, [onResult, onEnd, onError, isListening]);
 
 
   const startListening = useCallback(() => {
-    if (recognitionRef.current && !isListening) {
+    if (recognitionRef.current && !isListening && isSupported) {
       try {
         recognitionRef.current.start();
         setIsListening(true);
@@ -120,8 +136,11 @@ const useVoiceRecognition = ({ onResult, onEnd, onError }: UseVoiceRecognitionPr
          toast({ title: "Voice Error", description: "Could not start voice recognition.", variant: "destructive"});
          if (onError) onError(e);
       }
+    } else if (!isSupported) {
+        toast({ title: "Voice Input Not Supported", description: "Your browser does not support voice recognition.", variant: "destructive" });
+        if (onError) onError(new Error("Voice input not supported by the browser."));
     }
-  }, [isListening, toast, onError]);
+  }, [isListening, isSupported, toast, onError]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current && isListening) {
@@ -138,11 +157,10 @@ const useVoiceRecognition = ({ onResult, onEnd, onError }: UseVoiceRecognitionPr
     }
   }, [isListening, startListening, stopListening]);
 
-  // Effect to show toast once if not supported
   useEffect(() => {
     if (typeof window !== 'undefined' && !isSupported && (window.SpeechRecognition || window.webkitSpeechRecognition) === undefined) {
-        // Ensure this toast appears only once after checking support
-        toast({ title: "Voice Input Not Supported", description: "Your browser does not support voice recognition.", variant: "destructive" });
+        // This toast might be redundant if onError handles the "not supported" case.
+        // toast({ title: "Voice Input Not Supported", description: "Your browser does not support voice recognition.", variant: "destructive" });
     }
   }, [isSupported, toast]);
 
@@ -151,3 +169,4 @@ const useVoiceRecognition = ({ onResult, onEnd, onError }: UseVoiceRecognitionPr
 };
 
 export default useVoiceRecognition;
+
