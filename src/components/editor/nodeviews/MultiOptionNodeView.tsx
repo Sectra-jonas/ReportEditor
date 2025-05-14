@@ -16,8 +16,6 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
   const options = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
   const currentValue = node.attrs.currentValue as string || options[0] || "Select";
 
-  // console.log(`NodeView ${currentValue}: isOpen=${isOpen}, editable=${editor?.isEditable}, options:`, options);
-
   const handleSelectOption = useCallback((option: string) => {
     if (editor.isEditable) {
       updateAttributes({ currentValue: option });
@@ -44,10 +42,7 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
           onClick={(e) => {
             if (editor.isEditable) {
               e.preventDefault(); 
-              // console.log(`NodeView ${currentValue}: Trigger clicked. Current isOpen=${isOpen}. Will toggle.`);
               setIsOpen(prev => !prev);
-            } else {
-              // console.log(`NodeView ${currentValue}: Trigger clicked but editor not editable.`);
             }
           }}
           onKeyDown={(e) => { 
@@ -64,24 +59,24 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
         </PopoverTrigger>
         {editor.isEditable && (
           <PopoverContent 
-            className="w-auto p-0 mt-1 border-2 border-red-500 z-[60]" // Debug: prominent border and higher z-index
+            className="w-auto p-0 mt-1 z-[60]" // Removed red border, p-0 for button list
             side="bottom" 
             align="start"
-            onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing on open
-            onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing on close
+            onOpenAutoFocus={(e) => e.preventDefault()} 
+            onCloseAutoFocus={(e) => e.preventDefault()} 
           >
-            <div className="flex flex-col max-h-60 overflow-y-auto">
+            <div className="flex flex-col max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md">
               {options.length > 0 ? options.map((option) => (
                 <Button
                   key={option}
                   variant="ghost"
                   size="sm"
-                  className="justify-start rounded-none"
+                  className="justify-start rounded-none first:rounded-t-sm last:rounded-b-sm" // Keep some rounding for overall list
                   onClick={(e) => {
                     e.preventDefault(); 
                     handleSelectOption(option);
                   }}
-                  onMouseDown={(e) => e.preventDefault()} 
+                  onMouseDown={(e) => e.preventDefault()} // Prevent editor losing focus on click
                 >
                   {option}
                 </Button>

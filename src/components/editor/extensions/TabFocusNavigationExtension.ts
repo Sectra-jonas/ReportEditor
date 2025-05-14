@@ -15,7 +15,8 @@ const findFieldNodes = (editor: Editor): FieldNodeInfo[] => {
       nodes.push({ pos, node });
     }
   });
-  return nodes;
+  // Sort nodes by their position in the document to ensure correct Tab order
+  return nodes.sort((a, b) => a.pos - b.pos);
 };
 
 export const TabFocusNavigationExtension = Extension.create({
@@ -29,24 +30,34 @@ export const TabFocusNavigationExtension = Extension.create({
         const { selection } = state;
 
         const fieldNodes = findFieldNodes(editor);
-        if (fieldNodes.length === 0) return false; // No fields, default Tab
+        if (fieldNodes.length === 0) return false; 
 
         let currentNodeIndex = -1;
-        // Check if selection is currently on or inside a field node
         for (let i = 0; i < fieldNodes.length; i++) {
           const { pos, node } = fieldNodes[i];
-          if (selection.from >= pos && selection.to <= pos + node.nodeSize) {
+          // Check if the current selection is *at the start* of the node
+          // or if the node is fully selected.
+          if (selection.from === pos && selection.to === pos + node.nodeSize) {
             currentNodeIndex = i;
             break;
+          }
+          // Fallback: if cursor is within the node, consider it current
+          if (selection.from >= pos && selection.to <= pos + node.nodeSize) {
+             currentNodeIndex = i;
+             // break; // Don't break here, prefer exact match if available later
           }
         }
         
         let nextNodeIndex: number;
         if (currentNodeIndex !== -1) {
-          // If currently on a field, move to the next one
-          nextNodeIndex = (currentNodeIndex + 1) % fieldNodes.length;
+          nextNodeIndex = (currentNodeIndex + 1);
+          if (nextNodeIndex >= fieldNodes.length) {
+            // If we're at the last field, let Tab do its default behavior (e.g., move out of editor)
+            // Or, if you want to loop, set nextNodeIndex = 0;
+            return false; // Allow default Tab behavior to exit editor or move to next focusable element
+          }
         } else {
-          // If not on a field, find the closest field node after the current cursor position
+          // If not on a field, find the first field after the current cursor
           let foundNext = false;
           for (let i = 0; i < fieldNodes.length; i++) {
             if (fieldNodes[i].pos >= selection.from) {
@@ -55,29 +66,26 @@ export const TabFocusNavigationExtension = Extension.create({
               break;
             }
           }
-          if (!foundNext) { // If cursor is after all fields, loop to the first
-            nextNodeIndex = 0;
+          if (!foundNext) { 
+            return false; // No field found after cursor, default Tab
           }
         }
         
         const nextField = fieldNodes[nextNodeIndex!];
         if (nextField) {
           editor.commands.setNodeSelection(nextField.pos);
-          // For MultiOptionNode, attempt to trigger its popover or give it focus programmatically
-          // This part is tricky as NodeView interaction from here is indirect
           const domNode = view.nodeDOM(nextField.pos) as HTMLElement;
           if (domNode) {
-            // domNode.focus(); // This might work if NodeViewWrapper or inner trigger is focusable
-            // If it's a multiOption and we want to open its popover:
             if (nextField.node.type.name === 'multiOption') {
-              // This is a bit of a hack, directly clicking the DOM element
-              // It assumes the PopoverTrigger is the first interactive child or the node itself
-              const trigger = domNode.querySelector('[role="button"]') as HTMLElement || domNode;
-              trigger?.focus(); // First focus it
-              // trigger?.click(); // Then simulate click if needed
+              const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
+              trigger?.focus(); 
+            } else if (nextField.node.type.name === 'fieldName') {
+                // For FieldNameNode, the node itself can be focused if it has tabIndex,
+                // or we can just select it. For now, setNodeSelection is enough.
+                // domNode.focus(); // Requires field-name-node to have tabIndex={0}
             }
           }
-          return true; // Tab handled
+          return true; 
         }
         return false;
       },
@@ -93,16 +101,24 @@ export const TabFocusNavigationExtension = Extension.create({
         let currentNodeIndex = -1;
         for (let i = 0; i < fieldNodes.length; i++) {
           const { pos, node } = fieldNodes[i];
-          if (selection.from >= pos && selection.to <= pos + node.nodeSize) {
+          if (selection.from === pos && selection.to === pos + node.nodeSize) {
             currentNodeIndex = i;
             break;
+          }
+          if (selection.from >= pos && selection.to <= pos + node.nodeSize) {
+             currentNodeIndex = i;
           }
         }
 
         let prevNodeIndex: number;
         if (currentNodeIndex !== -1) {
-          prevNodeIndex = (currentNodeIndex - 1 + fieldNodes.length) % fieldNodes.length;
+          prevNodeIndex = (currentNodeIndex - 1);
+          if (prevNodeIndex < 0) {
+            // If at the first field, allow Shift-Tab to its default behavior
+            return false; 
+          }
         } else {
+          // If not on a field, find the first field before current cursor
           let foundPrev = false;
           for (let i = fieldNodes.length - 1; i >= 0; i--) {
             if (fieldNodes[i].pos < selection.from) {
@@ -111,8 +127,8 @@ export const TabFocusNavigationExtension = Extension.create({
               break;
             }
           }
-          if (!foundPrev) { // If cursor is before all fields, loop to the last
-            prevNodeIndex = fieldNodes.length - 1;
+          if (!foundPrev) {
+            return false; // No field found before cursor, default Shift-Tab
           }
         }
 
@@ -121,13 +137,18 @@ export const TabFocusNavigationExtension = Extension.create({
           editor.commands.setNodeSelection(prevField.pos);
           const domNode = view.nodeDOM(prevField.pos) as HTMLElement;
           if (domNode) {
-            const trigger = domNode.querySelector('[role="button"]') as HTMLElement || domNode;
-            trigger?.focus();
+            if (prevField.node.type.name === 'multiOption') {
+              const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
+              trigger?.focus();
+            } else if (prevField.node.type.name === 'fieldName') {
+              // domNode.focus();
+            }
           }
-          return true; // Shift-Tab handled
+          return true;
         }
         return false;
       },
     };
   },
 });
+
