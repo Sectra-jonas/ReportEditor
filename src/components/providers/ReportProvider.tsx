@@ -10,52 +10,102 @@ import { useState, type ReactNode, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid'; 
 
-// Helper function to generate PDF (simplified)
+// Helper function to generate PDF
 async function generatePdf(contentHtml: string, reportName: string) {
   const { jsPDF } = await import('jspdf');
   const html2canvas = (await import('html2canvas')).default;
 
   const element = document.createElement('div');
-  // Add prose styles for PDF rendering to somewhat match editor
-  element.innerHTML = `<div class="prose prose-sm dark:prose-invert">${contentHtml}</div>`;
+  // Append to body FIRST to allow style computation
+  document.body.appendChild(element);
+
+  // Set styles for the container element
   element.style.width = '210mm'; // A4 width
   element.style.padding = '20mm'; // Margins for PDF
   element.style.backgroundColor = 'white'; // Ensure consistent background for canvas
   element.style.color = 'black'; // Ensure consistent text color
   
-  // Temporarily append to body to compute styles
+  // For off-screen rendering
   element.style.visibility = 'hidden';
   element.style.position = 'absolute';
   element.style.left = '-9999px';
-  document.body.appendChild(element);
+  element.style.top = '0px'; // Ensure it's in the viewport for some browsers if visibility:hidden is tricky
 
-  const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: null });
-  const imgData = canvas.toDataURL('image/png');
+  // Prepare the content with prose styles, explicitly avoiding dark mode for PDF
+  element.innerHTML = `<div class="prose prose-sm">${contentHtml}</div>`;
   
-  document.body.removeChild(element); // Clean up element
+  // Add a small delay for the browser to render/calculate styles
+  await new Promise(resolve => setTimeout(resolve, 250)); 
 
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const imgProps = pdf.getImageProperties(imgData);
-  const pdfPageWidth = pdf.internal.pageSize.getWidth() - 20; // page width with 10mm margin on each side
-  const pdfPageHeight = pdf.internal.pageSize.getHeight() - 20; // page height with 10mm margin
+  try {
+    const canvas = await html2canvas(element, { 
+      scale: 2, 
+      useCORS: true, 
+      backgroundColor: '#ffffff', // Explicitly set canvas background
+      logging: true, // Enable html2canvas logging for debugging
+      onclone: (document) => {
+        // This is a good place to ensure styles are correctly applied
+        // For example, if CSS variables from :root are needed, they could be injected here.
+        // For now, relying on Tailwind's compiled prose styles.
+      }
+    });
 
-  const imgWidth = pdfPageWidth;
-  const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-  
-  let heightLeft = imgHeight;
-  let position = 10; // Initial y position with 10mm margin
+    // console.log('Canvas height:', canvas.height, 'Canvas width:', canvas.width);
+    if (canvas.height === 0 || canvas.width === 0) {
+      console.error("PDF Export Error: Canvas has zero dimensions. Content might be empty or not rendered correctly.");
+      throw new Error("Canvas has zero dimensions. Content might be empty or not rendered correctly for PDF export.");
+    }
 
-  pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-  heightLeft -= pdfPageHeight;
+    const imgData = canvas.toDataURL('image/png');
+    
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfPageWidth = pdf.internal.pageSize.getWidth() - 20; // page width with 10mm margin on each side
+    const pdfPageHeight = pdf.internal.pageSize.getHeight() - 20; // page height with 10mm margin
 
-  while (heightLeft > 0) {
-    position = position - pdfPageHeight; // effectively (position - pageHeightWithoutMargins) for next page
-    pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-    heightLeft -= pdfPageHeight;
+    let imgWidth = pdfPageWidth;
+    let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+    
+    // Check if image height is larger than page height, if so, scale to fit
+    if (imgHeight > pdfPageHeight) {
+        imgHeight = pdfPageHeight; // Cap height to page height
+        imgWidth = (imgProps.width * imgHeight) / imgProps.height; // Recalculate width to maintain aspect ratio
+        // If scaled width is now wider than page, cap width and recalculate height (less likely if starting with pdfPageWidth)
+        if (imgWidth > pdfPageWidth) {
+            imgWidth = pdfPageWidth;
+            imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+        }
+    }
+
+
+    let heightLeft = imgHeight;
+    let currentPosition = 10; // Initial y position with 10mm margin
+
+    // For single very tall images that need to be split across pages:
+    const singleImageTotalHeight = (imgProps.height * pdfPageWidth) / imgProps.width;
+    let singleImagePosition = 0;
+
+
+    if (singleImageTotalHeight <= pdfPageHeight) {
+        // Image fits on one page (or is shorter)
+        pdf.addImage(imgData, 'PNG', 10, currentPosition, pdfPageWidth, singleImageTotalHeight);
+    } else {
+        // Image is taller than one page, needs splitting
+        let remainingHeight = singleImageTotalHeight;
+        while (remainingHeight > 0) {
+            pdf.addImage(imgData, 'PNG', 10, currentPosition - singleImagePosition, pdfPageWidth, singleImageTotalHeight);
+            remainingHeight -= pdfPageHeight;
+            singleImagePosition += pdfPageHeight;
+            if (remainingHeight > 0) {
+                pdf.addPage();
+            }
+        }
+    }
+    
+    pdf.save(`${reportName || 'Report'}.pdf`);
+  } finally {
+    document.body.removeChild(element); // Clean up element
   }
-  
-  pdf.save(`${reportName || 'Report'}.pdf`);
 }
 
 
@@ -106,8 +156,6 @@ export const ReportProvider = ({ children }: { children: ReactNode }) => {
     if (template && template.content && typeof template.content === 'string') {
       initialContent = processTemplateContent(template.content);
     } else if (template && template.content) {
-      // If content is not a string but exists, log warning and stringify.
-      // This path assumes template.content should ideally be a string for processTemplateContent.
       console.warn("Template content for new report is not a string, processing might be skipped or incorrect.");
       initialContent = JSON.stringify(template.content); 
     }
@@ -183,17 +231,19 @@ export const ReportProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Error", description: "No active report to export.", variant: "destructive" });
       return;
     }
-    if (editor.getHTML().trim() === "" || editor.getHTML().trim() === "<p></p>") {
+    const contentHtml = editor.getHTML();
+    // console.log("HTML content for PDF:", contentHtml); 
+
+    if (contentHtml.trim() === "" || contentHtml.trim() === "<p></p>") {
       toast({ title: "Export Aborted", description: "Cannot export an empty report.", variant: "default" });
       return;
     }
     try {
-      const contentHtml = editor.getHTML();
       await generatePdf(contentHtml, currentReport.name || 'Report');
       toast({ title: "Report Exported", description: "PDF generation started." });
-    } catch (error) {
-      console.error("PDF Export Error:", error);
-      toast({ title: "Export Error", description: "Failed to export report as PDF.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("PDF Export Error in useCallback:", error);
+      toast({ title: "Export Error", description: `Failed to export report as PDF. ${error.message || ''}`, variant: "destructive" });
     }
   }, [currentReport, editor, toast]);
 
@@ -258,7 +308,7 @@ export const ReportProvider = ({ children }: { children: ReactNode }) => {
     reports,
     loadReport,
     deleteReport,
-    insertTemplateIntoReport, // Add new function to context value
+    insertTemplateIntoReport,
   };
 
   return <ReportContext.Provider value={value}>{children}</ReportContext.Provider>;
