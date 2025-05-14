@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEditor, EditorContent, type EditorEvents } from '@tiptap/react';
@@ -8,6 +9,13 @@ import Heading from '@tiptap/extension-heading';
 import type { Editor } from '@tiptap/react';
 import { useEffect } from 'react';
 import EditorToolbar from './EditorToolbar'; // Can reuse the same toolbar
+
+// Custom Extensions for previewing in template editor (optional, but good for consistency)
+// These would be readonly versions or simplified versions if full interactivity is not needed here.
+// For now, template editor will just be a standard rich text editor.
+// import { FieldNameNode } from './extensions/FieldNameNode';
+// import { MultiOptionNode } from './extensions/MultiOptionNode';
+
 
 interface TemplateEditorProps {
   content?: string | Record<string, any>;
@@ -27,12 +35,16 @@ const TemplateEditor = ({
       }),
       Underline,
       Placeholder.configure({
-        placeholder: "Design your template. Use [FieldName] for basic fields and [OptionA|OptionB] for multi-choice fields.",
+        placeholder: "Design your template. Use [FieldName] for basic fields and [OptionA|OptionB|OptionC] for multi-choice fields.",
       }),
       Heading.configure({
         levels: [1, 2, 3],
       }),
-      // Future: Custom extensions for template fields to provide better UX in template editor itself.
+      // To see the fields render in the template editor itself (non-interactive or with limited interaction):
+      // FieldNameNode, // This would make [FieldName] typed here become a node
+      // MultiOptionNode, // This would make [OptionA|OptionB] typed here become a node
+      // Note: If added here, ensure no conflicts with the main report editor's interactive versions.
+      // The input rules in these nodes will convert [text] as you type.
     ],
     content: content,
     editable: true,
@@ -58,12 +70,19 @@ const TemplateEditor = ({
   }, [editor, setEditorInstance]);
 
   useEffect(() => {
-    if (editor && content && editor.getHTML() !== content) {
+    // Only update content if it's different and editor is ready
+    if (editor && content !== undefined) {
+      const currentContent = editor.getHTML(); // or getJSON() if dealing with JSON
+      if (currentContent !== content) {
+        // Prevent infinite loops by ensuring content actually changed
         if (typeof content === 'string') {
-            editor.commands.setContent(content, false);
+            editor.commands.setContent(content, false); // emitUpdate: false
         } else {
-            editor.commands.setContent(content, false);
+            editor.commands.setContent(content, false); // emitUpdate: false
         }
+      }
+    } else if (editor && content === undefined) {
+      editor.commands.clearContent(false); // emitUpdate: false
     }
   }, [content, editor]);
 

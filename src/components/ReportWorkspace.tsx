@@ -1,3 +1,4 @@
+
 "use client";
 
 import RichTextEditor from '@/components/editor/RichTextEditor';
@@ -5,47 +6,34 @@ import EditorToolbar from '@/components/editor/EditorToolbar';
 import { MainToolbar } from '@/components/layout/MainToolbar';
 import { useReport } from '@/contexts/ReportContext';
 import useVoiceRecognition from '@/hooks/useVoiceRecognition';
-import { useEffect, useRef }
-from 'react';
+import { useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const ReportWorkspace = () => {
-  const { editor, setEditor, currentReport, isDirty, setIsDirty } = useReport();
+  const { editor, setEditor, currentReport, isDirty, setIsDirty, createNewReport } = useReport();
   const { toast } = useToast();
   const lastInsertedTextRef = useRef<string | null>(null);
 
   const handleVoiceResult = (transcript: string, isFinal: boolean) => {
-    if (editor) {
+    if (editor && editor.isEditable) {
       if (isFinal) {
-        // Append final transcript
-        const currentPos = editor.state.selection.to;
-        editor.chain().focus().insertContentAt(currentPos, transcript + " ").run();
-        lastInsertedTextRef.current = null; // Clear ref after final insertion
+        // Append final transcript with a space
+        const { from, to } = editor.state.selection;
+        editor.chain().focus().insertContentAt({ from, to }, transcript + " ").run();
+        lastInsertedTextRef.current = null; 
       } else {
-        // Replace interim transcript: find last inserted interim and replace or append
-        // This is a simplified approach. A more robust way would be to mark the interim text.
-        const currentPos = editor.state.selection.to;
-        if (lastInsertedTextRef.current) {
-           // Attempt to find and replace the previous interim transcript
-           // This is tricky and might not be perfectly accurate without specific markers
-           // For simplicity, let's just insert and the user can manually correct or wait for final.
-           // A more advanced solution would be to use a transaction to replace a specific range.
-        }
-        // For now, just let it append and user can see it update. Or, insert at caret.
-        // editor.chain().focus().insertContentAt(editor.state.selection.to, transcript).run();
-        // A better interim UX is to show it elsewhere or use specific editor commands if available.
-        // For now, this might cause text jumping. Let's focus on final results.
-        // Simpler: just append if it's clearly different from last interim
-        if(transcript !== lastInsertedTextRef.current){
-            // console.log("Interim: ", transcript);
-        }
-        // No action for interim to avoid text jumping, only on final.
+        // Interim results can be complex to handle perfectly without specific markers.
+        // A common approach is to show them in a temporary UI element.
+        // For now, we'll avoid inserting interim results directly into the editor
+        // to prevent text jumping or overwriting issues.
+        // console.log("Interim transcript:", transcript);
+        // lastInsertedTextRef.current = transcript; // Could be used for more advanced replacement later
       }
     }
   };
   
   const handleVoiceEnd = () => {
-    // Voice recognition ended
+    // Voice recognition ended, already handled by isListening state change
   };
 
   const handleVoiceError = (error: any) => {
@@ -58,44 +46,49 @@ const ReportWorkspace = () => {
     onError: handleVoiceError,
   });
 
-  // Initialize with a new blank report if none exists
+  // Initialize with a new blank report if none exists on initial load
   useEffect(() => {
-    if (!currentReport && editor) {
-       // This is handled by ReportProvider: createNewReport() can be called initially if needed.
-       // Or, page.tsx can trigger initial report creation.
+    if (!currentReport && editor) { // Check if editor is also initialized
+       createNewReport();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [editor]); // Depend on editor initialization
 
   const handleEditorUpdate = () => {
-    if (!isDirty) setIsDirty(true);
+    if (!isDirty && editor && editor.isEditable) { // Only set dirty if editor is editable
+        // Check if the update was programmatic or user-initiated.
+        // Tiptap's 'transaction' object on update might have info.
+        // For simplicity, any update while editable is considered to make it dirty.
+        setIsDirty(true);
+    }
   };
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <MainToolbar />
-      <div className="flex flex-col flex-grow p-4 overflow-hidden">
-        <div className="flex flex-col flex-grow border border-input rounded-md shadow-lg bg-card">
+      <div className="flex flex-col flex-grow p-4 md:p-6 lg:p-8 overflow-hidden">
+        <div className="flex flex-col flex-grow border border-input rounded-lg shadow-xl bg-card">
           <EditorToolbar 
             editor={editor} 
             isVoiceActive={isListening} 
-            onToggleVoice={isSupported ? toggleListening : undefined} 
+            onToggleVoice={isSupported && editor?.isEditable ? toggleListening : undefined} 
+            disableControls={!editor?.isEditable}
           />
           <div className="flex-grow h-full overflow-y-auto">
             <RichTextEditor
               content={currentReport?.content || ''}
               setEditorInstance={setEditor}
               onUpdate={handleEditorUpdate}
-              placeholder="Start your radiology report here... Use the toolbar for formatting or voice input."
-              className="min-h-[calc(100vh-200px)]" // Adjust min-height as needed
+              editable={!!editor?.isEditable} // Controlled by editor instance state
+              placeholder="Start your radiology report here... Use [FieldName] or [OptionA|OptionB] for template fields."
+              className="min-h-[calc(100vh-220px)] rounded-t-none" // Adjust min-height and remove top rounding
             />
           </div>
         </div>
       </div>
-       {/* Voice status indicator example (can be integrated into toolbar) */}
        {isSupported && isListening && (
         <div 
-            className="fixed bottom-4 right-4 bg-destructive text-destructive-foreground p-3 rounded-full shadow-lg text-sm animate-pulse"
+            className="fixed bottom-4 right-4 bg-destructive text-destructive-foreground p-3 rounded-full shadow-lg text-sm animate-pulse z-50"
             aria-live="assertive"
             aria-atomic="true"
         >
