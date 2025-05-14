@@ -54,7 +54,7 @@ body {
     --secondary: 200 15% 35%; 
     --secondary-foreground: 207 17% 95%;
     --muted: 200 15% 18%;
-    --muted-foreground: 207 17% 65%;
+    --muted-foreground: 207 17% 65%; /* This is a good light gray for dark mode */
     --accent: 174 60% 37%; /* Teal */
     --accent-foreground: 0 0% 100%; /* White */
     --destructive: 0 72% 51%;
@@ -88,14 +88,12 @@ body {
 
   /* Tiptap Table specific styles */
   .ProseMirror table {
-    @apply w-full my-4 border-collapse table-fixed; /* Added table-fixed for resizable */
+    @apply w-full my-4 border-collapse table-fixed; 
   }
   .ProseMirror th,
   .ProseMirror td {
-    @apply border border-input p-2 text-left relative; /* Use input for border, consistent with other inputs */
-  }
-  .ProseMirror th {
-    @apply bg-muted font-semibold;
+    /* Basic padding and alignment, border styling moved to .prose section for specificity */
+    @apply p-2 text-left relative;
   }
   /* Tiptap selected cell and resize grip styling */
   .ProseMirror .selectedCell:after {
@@ -103,7 +101,6 @@ body {
     position: absolute;
     content: "";
     left: 0; right: 0; top: 0; bottom: 0;
-    /* background: rgba(var(--ring-hsl-values), 0.15); This needs actual HSL values */
     background: hsla(var(--ring), 0.15);
     pointer-events: none;
   }
@@ -121,13 +118,22 @@ body {
     background-color: hsl(var(--ring));
   }
   
-  /* Ensure prose doesn't override table cell borders too much */
+  /* Specific styles for tables within .prose (which RichTextEditor uses) */
   .prose th,
   .prose td {
-    border-color: hsl(var(--input)) !important; /* Force input border color */
-    padding: theme('spacing.2') theme('spacing.3'); /* Consistent padding */
+    border-width: 1px;
+    border-style: solid;
+    border-color: hsl(var(--input)); /* Default: light gray for light theme */
+    padding: theme('spacing.2') theme('spacing.3');
   }
   .prose th {
-    background-color: hsl(var(--muted)) !important; /* Force muted background */
+    background-color: hsl(var(--muted)) !important; /* Ensure prose default header bg is overridden */
+    font-weight: theme('fontWeight.semibold'); /* Ensure consistent font weight */
+  }
+
+  /* Dark theme overrides for table cell borders to ensure "light gray" visibility */
+  .dark .prose th,
+  .dark .prose td {
+    border-color: hsl(var(--muted-foreground)); /* Uses a light gray from the theme variables */
   }
 }
