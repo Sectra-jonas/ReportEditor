@@ -85,4 +85,49 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Tiptap Table specific styles */
+  .ProseMirror table {
+    @apply w-full my-4 border-collapse table-fixed; /* Added table-fixed for resizable */
+  }
+  .ProseMirror th,
+  .ProseMirror td {
+    @apply border border-input p-2 text-left relative; /* Use input for border, consistent with other inputs */
+  }
+  .ProseMirror th {
+    @apply bg-muted font-semibold;
+  }
+  /* Tiptap selected cell and resize grip styling */
+  .ProseMirror .selectedCell:after {
+    z-index: 2;
+    position: absolute;
+    content: "";
+    left: 0; right: 0; top: 0; bottom: 0;
+    /* background: rgba(var(--ring-hsl-values), 0.15); This needs actual HSL values */
+    background: hsla(var(--ring), 0.15);
+    pointer-events: none;
+  }
+
+  .ProseMirror .grip-column,
+  .ProseMirror .grip-row {
+    background-color: hsl(var(--border));
+    width: 6px;
+    border-radius: 2px;
+  }
+  .ProseMirror .grip-column.selected, 
+  .ProseMirror .grip-column:hover,
+  .ProseMirror .grip-row.selected, 
+  .ProseMirror .grip-row:hover {
+    background-color: hsl(var(--ring));
+  }
+  
+  /* Ensure prose doesn't override table cell borders too much */
+  .prose th,
+  .prose td {
+    border-color: hsl(var(--input)) !important; /* Force input border color */
+    padding: theme('spacing.2') theme('spacing.3'); /* Consistent padding */
+  }
+  .prose th {
+    background-color: hsl(var(--muted)) !important; /* Force muted background */
+  }
 }

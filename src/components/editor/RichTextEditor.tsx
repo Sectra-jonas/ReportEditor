@@ -6,6 +6,10 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
 import Heading from '@tiptap/extension-heading';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
 import type { Editor } from '@tiptap/react';
 import { useEffect } from 'react';
 
@@ -51,6 +55,12 @@ const RichTextEditor = ({
         // NodeView is configured directly in MultiOptionNode.ts via addNodeView
       }),
       TabFocusNavigationExtension,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: content, // Initial content
     editable: editable, // This prop controls Tiptap's editable state
@@ -78,12 +88,8 @@ const RichTextEditor = ({
   useEffect(() => {
     if (!editor) return;
 
-    // This effect ensures the editor's content reflects the 'content' prop.
-    // The 'editable' prop passed to useEditor() handles interactivity.
-    // This focuses on visual synchronization.
-
     const currentEditorHTML = editor.getHTML();
-    const currentEditorJSON = editor.getJSON(); // For comparison if content is JSON
+    const currentEditorJSON = editor.getJSON(); 
 
     let newContentIsDifferent = false;
 
@@ -91,28 +97,29 @@ const RichTextEditor = ({
       if (currentEditorHTML !== content) {
         newContentIsDifferent = true;
       }
-    } else if (content && typeof content === 'object') { // TipTap JSON object
+    } else if (content && typeof content === 'object') { 
       if (JSON.stringify(currentEditorJSON) !== JSON.stringify(content)) {
         newContentIsDifferent = true;
       }
-    } else if (!content) { // content is null, undefined, or empty string
-      if (currentEditorHTML !== '' && currentEditorHTML !== '<p></p>') { // Avoid redundant clear
-        newContentIsDifferent = true; // Treat as different if editor is not "empty"
+    } else if (!content) { 
+      if (currentEditorHTML !== '' && currentEditorHTML !== '<p></p>') { 
+        newContentIsDifferent = true;
       }
+    }
+    
+    // Synchronize editor's editable state with the prop
+    if (editor.isEditable !== editable) {
+      editor.setEditable(editable);
     }
 
     if (newContentIsDifferent) {
       if (content) {
-        editor.commands.setContent(content, false); // emitUpdate: false
+        editor.commands.setContent(content, false); 
       } else {
-        editor.commands.clearContent(false); // emitUpdate: false
+        editor.commands.clearContent(false); 
       }
     }
-  // The 'editable' prop directly controls useEditor's behavior.
-  // This effect syncs content based on the 'content' prop itself.
-  // If 'editable' changes, useEditor reconfigures; this effect ensures content consistency.
-  }, [content, editor, editable]); // 'editable' is included as changes to it might imply content should be re-evaluated/set,
-                                   // even if useEditor itself handles the interactive state.
+  }, [content, editor, editable]); 
 
 
   return <EditorContent editor={editor} className="h-full flex-grow" />;
