@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback } from 'react';
 import type { NodeViewProps } from '@tiptap/react';
-import { NodeViewWrapper } // ReactRenderer 
+import { NodeViewWrapper } 
 from '@tiptap/react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -12,21 +12,18 @@ import { ChevronDown } from 'lucide-react';
 export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, getPos, updateAttributes, selected }) => {
   const [isOpen, setIsOpen] = useState(false);
   
-  // Ensure attributes are correctly typed or provide fallbacks
   const optionsString = node.attrs.options as string || "";
   const options = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
   const currentValue = node.attrs.currentValue as string || options[0] || "Select";
+
+  // console.log(`NodeView ${currentValue}: isOpen=${isOpen}, editable=${editor?.isEditable}, options:`, options);
 
   const handleSelectOption = useCallback((option: string) => {
     if (editor.isEditable) {
       updateAttributes({ currentValue: option });
     }
     setIsOpen(false);
-    // editor.commands.focus(); // Re-focus editor can be disruptive if user wants to tab away.
   }, [editor, updateAttributes]);
-
-  // Ensure component updates if node attributes change externally
-  // This is implicitly handled by Tiptap + ReactRenderer for attribute changes.
 
   if (!editor) return null;
 
@@ -37,8 +34,8 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
         ${selected ? 'ring-2 ring-ring ring-offset-1' : 'border border-input'}
         ${!editor.isEditable ? 'cursor-default opacity-80' : ''}
       `}
-      draggable="true" // Standard for atom nodes
-      data-drag-handle // Standard for atom nodes
+      draggable="true" 
+      data-drag-handle 
     >
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger
@@ -46,11 +43,14 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
           disabled={!editor.isEditable}
           onClick={(e) => {
             if (editor.isEditable) {
-              e.preventDefault(); // Prevent editor focus issues
+              e.preventDefault(); 
+              // console.log(`NodeView ${currentValue}: Trigger clicked. Current isOpen=${isOpen}. Will toggle.`);
               setIsOpen(prev => !prev);
+            } else {
+              // console.log(`NodeView ${currentValue}: Trigger clicked but editor not editable.`);
             }
           }}
-          onKeyDown={(e) => { // Allow opening with Enter/Space when focused
+          onKeyDown={(e) => { 
             if (editor.isEditable && (e.key === 'Enter' || e.key === ' ')) {
               e.preventDefault();
               setIsOpen(prev => !prev);
@@ -63,7 +63,13 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
           </span>
         </PopoverTrigger>
         {editor.isEditable && (
-          <PopoverContent className="w-auto p-0 mt-1" side="bottom" align="start">
+          <PopoverContent 
+            className="w-auto p-0 mt-1 border-2 border-red-500 z-[60]" // Debug: prominent border and higher z-index
+            side="bottom" 
+            align="start"
+            onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing on open
+            onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing on close
+          >
             <div className="flex flex-col max-h-60 overflow-y-auto">
               {options.length > 0 ? options.map((option) => (
                 <Button
@@ -72,10 +78,10 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
                   size="sm"
                   className="justify-start rounded-none"
                   onClick={(e) => {
-                    e.preventDefault(); // Prevent any default editor behavior
+                    e.preventDefault(); 
                     handleSelectOption(option);
                   }}
-                  onMouseDown={(e) => e.preventDefault()} // Helps prevent editor losing focus
+                  onMouseDown={(e) => e.preventDefault()} 
                 >
                   {option}
                 </Button>
@@ -89,3 +95,4 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
     </NodeViewWrapper>
   );
 };
+
