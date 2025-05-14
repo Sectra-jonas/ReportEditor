@@ -46,20 +46,20 @@ const ReportWorkspace = () => {
     onError: handleVoiceError,
   });
 
-  // Initialize with a new blank report if none exists on initial load
+  // Initialize with a new blank report if none exists on initial load and editor is ready
   useEffect(() => {
-    if (!currentReport && editor) { // Check if editor is also initialized
+    if (!currentReport && editor) { 
        createNewReport();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]); // Depend on editor initialization
+  }, [editor]); // Depend on editor initialization, createNewReport is memoized
 
   const handleEditorUpdate = () => {
-    if (!isDirty && editor && editor.isEditable) { // Only set dirty if editor is editable
+    if (editor && editor.isEditable) { // Only set dirty if editor is editable
         // Check if the update was programmatic or user-initiated.
-        // Tiptap's 'transaction' object on update might have info.
         // For simplicity, any update while editable is considered to make it dirty.
-        setIsDirty(true);
+        // This check avoids setting dirty if content is set programmatically when editor is not editable.
+        if (!isDirty) setIsDirty(true); 
     }
   };
 
@@ -72,16 +72,16 @@ const ReportWorkspace = () => {
             editor={editor} 
             isVoiceActive={isListening} 
             onToggleVoice={isSupported && editor?.isEditable ? toggleListening : undefined} 
-            disableControls={!editor?.isEditable}
+            disableControls={!editor?.isEditable} // Toolbar controls depend on editor's actual editable state
           />
           <div className="flex-grow h-full overflow-y-auto">
             <RichTextEditor
               content={currentReport?.content || ''}
               setEditorInstance={setEditor}
               onUpdate={handleEditorUpdate}
-              editable={!!editor?.isEditable} // Controlled by editor instance state
+              editable={!!currentReport} // Editor component is editable if a report is loaded
               placeholder="Start your radiology report here... Use [FieldName] or [OptionA|OptionB] for template fields."
-              className="min-h-[calc(100vh-220px)] rounded-t-none" // Adjust min-height and remove top rounding
+              className="min-h-[calc(100vh-220px)] rounded-t-none" 
             />
           </div>
         </div>
