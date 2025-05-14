@@ -2,6 +2,7 @@
 import { Extension } from '@tiptap/core';
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import { NodeSelection } from 'prosemirror-state';
 
 interface FieldNodeInfo {
   pos: number;
@@ -30,21 +31,16 @@ export const TabFocusNavigationExtension = Extension.create({
         const { selection } = state;
 
         const fieldNodes = findFieldNodes(editor);
-        if (fieldNodes.length === 0) return false; 
+        if (fieldNodes.length === 0) return false;
 
         let currentNodeIndex = -1;
-        for (let i = 0; i < fieldNodes.length; i++) {
-          const { pos, node } = fieldNodes[i];
-          // Check if the current selection is *at the start* of the node
-          // or if the node is fully selected.
-          if (selection.from === pos && selection.to === pos + node.nodeSize) {
-            currentNodeIndex = i;
-            break;
-          }
-          // Fallback: if cursor is within the node, consider it current
-          if (selection.from >= pos && selection.to <= pos + node.nodeSize) {
-             currentNodeIndex = i;
-             // break; // Don't break here, prefer exact match if available later
+        if (selection instanceof NodeSelection) {
+          // Find which of our fieldNodes matches the currently selected node
+          for (let i = 0; i < fieldNodes.length; i++) {
+            if (fieldNodes[i].pos === selection.from && fieldNodes[i].node === selection.node) {
+              currentNodeIndex = i;
+              break;
+            }
           }
         }
         
@@ -52,12 +48,10 @@ export const TabFocusNavigationExtension = Extension.create({
         if (currentNodeIndex !== -1) {
           nextNodeIndex = (currentNodeIndex + 1);
           if (nextNodeIndex >= fieldNodes.length) {
-            // If we're at the last field, let Tab do its default behavior (e.g., move out of editor)
-            // Or, if you want to loop, set nextNodeIndex = 0;
             return false; // Allow default Tab behavior to exit editor or move to next focusable element
           }
         } else {
-          // If not on a field, find the first field after the current cursor
+          // If not on a field (e.g. TextSelection), find the first field at or after the current cursor
           let foundNext = false;
           for (let i = 0; i < fieldNodes.length; i++) {
             if (fieldNodes[i].pos >= selection.from) {
@@ -80,9 +74,7 @@ export const TabFocusNavigationExtension = Extension.create({
               const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
               trigger?.focus(); 
             } else if (nextField.node.type.name === 'fieldName') {
-                // For FieldNameNode, the node itself can be focused if it has tabIndex,
-                // or we can just select it. For now, setNodeSelection is enough.
-                // domNode.focus(); // Requires field-name-node to have tabIndex={0}
+              view.focus(); // Ensure the editor view itself has focus for fieldName selection
             }
           }
           return true; 
@@ -99,14 +91,12 @@ export const TabFocusNavigationExtension = Extension.create({
         if (fieldNodes.length === 0) return false;
 
         let currentNodeIndex = -1;
-        for (let i = 0; i < fieldNodes.length; i++) {
-          const { pos, node } = fieldNodes[i];
-          if (selection.from === pos && selection.to === pos + node.nodeSize) {
-            currentNodeIndex = i;
-            break;
-          }
-          if (selection.from >= pos && selection.to <= pos + node.nodeSize) {
-             currentNodeIndex = i;
+        if (selection instanceof NodeSelection) {
+          for (let i = 0; i < fieldNodes.length; i++) {
+            if (fieldNodes[i].pos === selection.from && fieldNodes[i].node === selection.node) {
+              currentNodeIndex = i;
+              break;
+            }
           }
         }
 
@@ -114,13 +104,14 @@ export const TabFocusNavigationExtension = Extension.create({
         if (currentNodeIndex !== -1) {
           prevNodeIndex = (currentNodeIndex - 1);
           if (prevNodeIndex < 0) {
-            // If at the first field, allow Shift-Tab to its default behavior
-            return false; 
+            return false; // Allow default Shift-Tab behavior
           }
         } else {
-          // If not on a field, find the first field before current cursor
+          // If not on a field, find the first field strictly before current cursor
           let foundPrev = false;
           for (let i = fieldNodes.length - 1; i >= 0; i--) {
+            // If selection.from is at the start of a field, we want the one before it.
+            // So, check fieldNodes[i].pos < selection.from
             if (fieldNodes[i].pos < selection.from) {
               prevNodeIndex = i;
               foundPrev = true;
@@ -128,7 +119,14 @@ export const TabFocusNavigationExtension = Extension.create({
             }
           }
           if (!foundPrev) {
-            return false; // No field found before cursor, default Shift-Tab
+            // If no field before, maybe select the last field if cursor is after all fields
+            // Or, more simply, let default behavior occur if cursor is at the start.
+            // For now, stick to finding a field *before* the cursor.
+            if (fieldNodes.length > 0 && selection.from > fieldNodes[fieldNodes.length -1].pos) {
+                 prevNodeIndex = fieldNodes.length -1; // select last field
+            } else {
+                return false; 
+            }
           }
         }
 
@@ -141,7 +139,7 @@ export const TabFocusNavigationExtension = Extension.create({
               const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
               trigger?.focus();
             } else if (prevField.node.type.name === 'fieldName') {
-              // domNode.focus();
+              view.focus(); // Ensure the editor view itself has focus
             }
           }
           return true;
@@ -151,4 +149,3 @@ export const TabFocusNavigationExtension = Extension.create({
     };
   },
 });
-
