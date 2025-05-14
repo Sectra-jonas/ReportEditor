@@ -6,7 +6,7 @@ import EditorToolbar from '@/components/editor/EditorToolbar';
 import { MainToolbar } from '@/components/layout/MainToolbar';
 import { useReport } from '@/contexts/ReportContext';
 import useVoiceRecognition from '@/hooks/useVoiceRecognition';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const ReportWorkspace = () => {
@@ -14,25 +14,28 @@ const ReportWorkspace = () => {
   const { toast } = useToast();
   const lastInsertedTextRef = useRef<string | null>(null);
 
-  const handleVoiceResult = (transcript: string, isFinal: boolean) => {
+  const handleVoiceResult = useCallback((transcript: string, isFinal: boolean) => {
     if (editor && editor.isEditable) {
       if (isFinal) {
         const { from, to } = editor.state.selection;
         editor.chain().focus().insertContentAt({ from, to }, transcript + " ").run();
         lastInsertedTextRef.current = null;
+        if (!isDirty) {
+          setIsDirty(true);
+        }
       } else {
         // Interim results handled by visual indicator
       }
     }
-  };
+  }, [editor, isDirty, setIsDirty]);
 
-  const handleVoiceEnd = () => {
-    // Handled by isListening state change
-  };
+  const handleVoiceEnd = useCallback(() => {
+    // Handled by isListening state change in the hook
+  }, []);
 
-  const handleVoiceError = (error: any) => {
+  const handleVoiceError = useCallback((error: any) => {
     toast({ title: "Voice Recognition Error", description: error.message || String(error), variant: "destructive" });
-  };
+  }, [toast]);
 
   const { isListening, toggleListening, isSupported } = useVoiceRecognition({
     onResult: handleVoiceResult,
@@ -62,7 +65,7 @@ const ReportWorkspace = () => {
             editor={editor}
             isVoiceActive={isListening}
             onToggleVoice={isSupported && editor?.isEditable ? toggleListening : undefined}
-            disableControls={!currentReport} 
+            disableControls={!currentReport}
           />
           <div className="flex-grow h-full overflow-y-auto">
             <RichTextEditor
@@ -70,7 +73,7 @@ const ReportWorkspace = () => {
               content={currentReport?.content || ''}
               setEditorInstance={setEditor}
               onUpdate={handleEditorUpdate}
-              editable={!!currentReport} 
+              editable={!!currentReport}
               placeholder="Start your radiology report here... Use [FieldName] or [OptionA|OptionB] for template fields."
               className="min-h-[calc(100vh-220px)] rounded-t-none"
             />
