@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -42,8 +43,7 @@ export const TemplateEditorModal = ({
     if (isOpen && !currentTemplate) {
       createNewTemplate();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]); // createNewTemplate is stable
+  }, [isOpen, currentTemplate, createNewTemplate]); 
 
   const handleSave = () => {
     setIsSaveTemplateDialogOpen(true);
@@ -76,7 +76,7 @@ export const TemplateEditorModal = ({
             <Button variant="outline" size="sm" onClick={loadTemplateFromFile}>
               <FileUp className="mr-2 h-4 w-4" /> Load Template
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSave} disabled={!templateEditor || (!isTemplateDirty && !currentTemplate?.name.startsWith("Untitled"))}>
+            <Button variant="outline" size="sm" onClick={handleSave} disabled={!templateEditor || (!isTemplateDirty && currentTemplate?.name !== 'Untitled Template' && !currentTemplate?.name.startsWith("Untitled"))}>
               <FileDown className="mr-2 h-4 w-4" /> Save Template
             </Button>
           </div>
@@ -108,3 +108,4 @@ export const TemplateEditorModal = ({
     </>
   );
 };
+

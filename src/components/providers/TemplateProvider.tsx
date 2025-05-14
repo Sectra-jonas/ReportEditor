@@ -1,3 +1,4 @@
+
 "use client";
 
 import { TemplateContext, type TemplateContextType } from '@/contexts/TemplateContext';
@@ -12,42 +13,48 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const [currentTemplate, setCurrentTemplateState] = useState<ReportTemplate | null>(null);
   const [templateEditor, setTemplateEditor] = useState<Editor | null>(null);
-  const [isTemplateDirty, setIsTemplateDirty] = useState(false);
-  const [loadedTemplates, setLoadedTemplates] = useState<ReportTemplate[]>([]); // In-memory list of templates loaded in session
+  const [isTemplateDirty, setIsTemplateDirtyState] = useState(false);
+  const [loadedTemplates, setLoadedTemplates] = useState<ReportTemplate[]>([]);
 
-  const setCurrentTemplate = (template: ReportTemplate | null) => {
+  const setCurrentTemplateForContext = useCallback((template: ReportTemplate | null) => {
     setCurrentTemplateState(template);
     if (templateEditor && template) {
-      templateEditor.commands.setContent(template.content || '');
+      templateEditor.commands.setContent(template.content || '', false); // emitUpdate: false to prevent loops
     } else if (templateEditor && !template) {
-      templateEditor.commands.setContent('');
+      templateEditor.commands.setContent('', false); // emitUpdate: false
     }
-    setIsTemplateDirty(false);
-  };
+    setIsTemplateDirtyState(false);
+  }, [templateEditor]);
+
+  const setIsTemplateDirtyForContext = useCallback((dirty: boolean) => {
+    setIsTemplateDirtyState(dirty);
+  }, []);
 
   useEffect(() => {
     if (templateEditor && currentTemplate) {
-      // Logic to detect if template content changed
+      // Logic to detect if template content changed might have existed here
+      // For example, compare editor.getHTML() with currentTemplate.content
+      // and set isTemplateDirty accordingly. For now, updates are manual.
     }
   }, [templateEditor, currentTemplate]);
 
-  const addLoadedTemplate = (template: ReportTemplate) => {
+  const addLoadedTemplate = useCallback((template: ReportTemplate) => {
     setLoadedTemplates(prev => {
       const existing = prev.find(t => t.id === template.id || t.name === template.name);
       if (existing) {
         // Optionally update existing or prevent duplicates
-        toast({ title: "Template Updated", description: `Template "${template.name}" reloaded.` });
+        setTimeout(() => toast({ title: "Template Updated", description: `Template "${template.name}" reloaded.` }), 0);
         return prev.map(t => t.id === template.id ? template : t);
       }
-      toast({ title: "Template Loaded", description: `Template "${template.name}" added to session.` });
+      setTimeout(() => toast({ title: "Template Loaded", description: `Template "${template.name}" added to session.` }), 0);
       return [...prev, template];
     });
-  };
+  }, [toast]);
 
-  const removeLoadedTemplate = (templateId: string) => {
+  const removeLoadedTemplate = useCallback((templateId: string) => {
     setLoadedTemplates(prev => prev.filter(t => t.id !== templateId));
-    toast({ title: "Template Removed", description: "Template removed from session." });
-  };
+    setTimeout(() => toast({ title: "Template Removed", description: "Template removed from session." }),0);
+  }, [toast]);
 
   const createNewTemplate = useCallback(() => {
     const newTemplate: ReportTemplate = {
@@ -57,33 +64,36 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setCurrentTemplate(newTemplate);
+    setCurrentTemplateForContext(newTemplate); // This will also set isTemplateDirty to false
     if (templateEditor) {
-      templateEditor.commands.setContent(newTemplate.content);
+      templateEditor.commands.setContent(newTemplate.content, false); // emitUpdate: false
       templateEditor.commands.focus();
     }
-    setIsTemplateDirty(false); // Fresh template is not dirty
-    toast({ title: "New template created in editor." });
-  }, [templateEditor, toast]);
+    // setIsTemplateDirtyState(false); // Already handled by setCurrentTemplateForContext
+
+    // Defer toast to prevent updates during render cycle
+    setTimeout(() => {
+      toast({ title: "New template created in editor." });
+    }, 0);
+  }, [templateEditor, toast, setCurrentTemplateForContext]);
 
   const saveTemplateToFile = useCallback(async (name?: string) => {
     if (!currentTemplate || !templateEditor) {
-      toast({ title: "Error", description: "No active template or editor found.", variant: "destructive" });
+      setTimeout(() => toast({ title: "Error", description: "No active template or editor found.", variant: "destructive" }), 0);
       return;
     }
     const templateName = name || currentTemplate.name;
     const updatedTemplate: ReportTemplate = {
       ...currentTemplate,
       name: templateName,
-      content: templateEditor.getHTML(), // Or JSON for TipTap
+      content: templateEditor.getHTML(), 
       updatedAt: new Date(),
     };
     
-    // For saving to file system
     const contentToSave = JSON.stringify({
       id: updatedTemplate.id,
       name: updatedTemplate.name,
-      content: updatedTemplate.content, // Save HTML content or TipTap JSON
+      content: updatedTemplate.content, 
       createdAt: updatedTemplate.createdAt.toISOString(),
       updatedAt: updatedTemplate.updatedAt.toISOString(),
     });
@@ -97,17 +107,17 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    setCurrentTemplate(updatedTemplate); // Update state with saved content
-    addLoadedTemplate(updatedTemplate); // Also add/update it in the loaded templates list
-    setIsTemplateDirty(false);
-    toast({ title: "Template Saved", description: `"${templateName}" has been saved to file.` });
-  }, [currentTemplate, templateEditor, toast, addLoadedTemplate]);
+    setCurrentTemplateForContext(updatedTemplate); 
+    addLoadedTemplate(updatedTemplate); 
+    setIsTemplateDirtyState(false); // Explicitly set dirty to false after save
+    setTimeout(() => toast({ title: "Template Saved", description: `"${templateName}" has been saved to file.` }), 0);
+  }, [currentTemplate, templateEditor, toast, addLoadedTemplate, setCurrentTemplateForContext]);
 
   const loadTemplateFromFile = useCallback(async () => {
     return new Promise<void>((resolve, reject) => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = TEMPLATE_FILE_EXTENSION + ",.json"; // Allow .json for flexibility
+      input.accept = TEMPLATE_FILE_EXTENSION + ",.json";
 
       input.onchange = (event) => {
         const file = (event.target as HTMLInputElement)?.files?.[0];
@@ -129,19 +139,19 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
                 createdAt: parsedTemplate.createdAt ? new Date(parsedTemplate.createdAt) : new Date(),
                 updatedAt: new Date(),
               };
-              setCurrentTemplate(newTemplate); // Load into the current template editor
-              if(templateEditor) templateEditor.commands.setContent(newTemplate.content);
-              addLoadedTemplate(newTemplate); // Add to session list
-              toast({ title: "Template Loaded", description: `"${newTemplate.name}" loaded into editor.` });
+              setCurrentTemplateForContext(newTemplate); 
+              if(templateEditor) templateEditor.commands.setContent(newTemplate.content, false); // emitUpdate: false
+              addLoadedTemplate(newTemplate); 
+              setTimeout(() => toast({ title: "Template Loaded", description: `"${newTemplate.name}" loaded into editor.` }),0);
               resolve();
             } catch (err) {
               console.error("Failed to parse template file:", err);
-              toast({ title: "Load Error", description: "Failed to parse template file. Ensure it's a valid format.", variant: "destructive" });
+              setTimeout(() => toast({ title: "Load Error", description: "Failed to parse template file. Ensure it's a valid format.", variant: "destructive" }),0);
               reject(err);
             }
           };
           reader.onerror = (err) => {
-             toast({ title: "Load Error", description: "Error reading template file.", variant: "destructive" });
+             setTimeout(() => toast({ title: "Load Error", description: "Error reading template file.", variant: "destructive" }),0);
              reject(err);
           }
           reader.readAsText(file);
@@ -151,7 +161,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       };
       input.click();
     });
-  }, [templateEditor, toast, addLoadedTemplate]);
+  }, [templateEditor, toast, addLoadedTemplate, setCurrentTemplateForContext]);
 
 
   const getTemplateById = useCallback((id: string): ReportTemplate | undefined => {
@@ -160,11 +170,11 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
 
   const value: TemplateContextType = {
     currentTemplate,
-    setCurrentTemplate,
+    setCurrentTemplate: setCurrentTemplateForContext,
     templateEditor,
-    setTemplateEditor,
+    setTemplateEditor, // Direct state setter from useState is stable
     isTemplateDirty,
-    setIsTemplateDirty,
+    setIsTemplateDirty: setIsTemplateDirtyForContext,
     loadedTemplates,
     addLoadedTemplate,
     removeLoadedTemplate,
@@ -176,3 +186,4 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
 
   return <TemplateContext.Provider value={value}>{children}</TemplateContext.Provider>;
 };
+
