@@ -16,6 +16,7 @@ export interface ReportContextType {
   reports: Report[];
   loadReport: (reportId: string) => void;
   deleteReport: (reportId: string) => void;
+  insertTemplateIntoReport: (template: ReportTemplate) => Promise<void>; // New function
 }
 
 export const ReportContext = createContext<ReportContextType | undefined>(undefined);

@@ -1,9 +1,10 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
 import {
   FilePlus2, Save, Trash2, FileDown as ExportPdfIcon, 
-  ClipboardEdit, ListChecks
+  ClipboardEdit, ListChecks, ClipboardPaste
 } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
 import { useReport } from "@/contexts/ReportContext";
@@ -12,6 +13,7 @@ import { NewReportDialog } from "../modals/NewReportDialog";
 import { ConfirmationDialog } from "../modals/ConfirmationDialog";
 import { SaveFileDialog } from "../modals/SaveFileDialog";
 import { TemplateEditorModal } from "../modals/TemplateEditorModal";
+import { InsertTemplateDialog } from "../modals/InsertTemplateDialog"; // New import
 import { useToast } from "@/hooks/use-toast";
 import { ReportTemplate } from "@/types";
 import {
@@ -29,7 +31,9 @@ export const MainToolbar = () => {
     saveCurrentReport, 
     discardCurrentReport, 
     exportReportToPdf,
+    insertTemplateIntoReport, // New context function
     currentReport,
+    editor, // Get editor instance for disabled state
     isDirty,
     reports,
     loadReport
@@ -40,6 +44,7 @@ export const MainToolbar = () => {
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const [isSaveReportDialogOpen, setIsSaveReportDialogOpen] = useState(false);
   const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
+  const [isInsertTemplateDialogOpen, setIsInsertTemplateDialogOpen] = useState(false); // New state
 
   const handleSaveReport = () => {
     if (currentReport && (currentReport.name === 'Untitled Report' || !currentReport.name)) {
@@ -56,10 +61,13 @@ export const MainToolbar = () => {
   const handleSelectNewReport = (template?: ReportTemplate) => {
     if(isDirty || (currentReport && currentReport.content && currentReport.content !== '<p></p>')) {
       // TODO: show confirmation if current report is dirty
-      // For now, just proceed
     }
     createNewReport(template);
   }
+
+  const handleInsertTemplate = (template: ReportTemplate) => {
+    insertTemplateIntoReport(template);
+  };
 
   return (
     <>
@@ -99,6 +107,13 @@ export const MainToolbar = () => {
         <Button variant="outline" onClick={() => setIsTemplateEditorOpen(true)}>
           <ClipboardEdit className="mr-2 h-4 w-4" /> Template Editor
         </Button>
+        <Button 
+          variant="outline" 
+          onClick={() => setIsInsertTemplateDialogOpen(true)} 
+          disabled={!currentReport || !editor?.isEditable}
+        >
+          <ClipboardPaste className="mr-2 h-4 w-4" /> Insert Template
+        </Button>
 
         <Separator orientation="vertical" className="h-8 mx-2" />
 
@@ -131,6 +146,11 @@ export const MainToolbar = () => {
       <TemplateEditorModal
         isOpen={isTemplateEditorOpen}
         onOpenChange={setIsTemplateEditorOpen}
+      />
+      <InsertTemplateDialog
+        isOpen={isInsertTemplateDialogOpen}
+        onOpenChange={setIsInsertTemplateDialogOpen}
+        onSelect={handleInsertTemplate}
       />
     </>
   );
