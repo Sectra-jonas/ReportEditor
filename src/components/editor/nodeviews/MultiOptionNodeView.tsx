@@ -52,14 +52,36 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
             }
           }}
         >
-          <span className="flex items-center select-none" role="button" tabIndex={editor.isEditable ? 0 : -1}>
-            {currentValue}
-            <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-          </span>
+          <div className="flex items-center" role="button" tabIndex={editor.isEditable ? 0 : -1}>
+            <input
+              type="text"
+              value={currentValue}
+              onChange={(e) => {
+                if (editor.isEditable) {
+                  updateAttributes({ currentValue: e.target.value });
+                }
+              }}
+              disabled={!editor.isEditable}
+              className="bg-transparent focus:outline-none w-auto min-w-[50px] text-accent-foreground p-0 m-0 border-none h-auto"
+              onClick={(e) => {
+                if (editor.isEditable) {
+                  e.stopPropagation(); 
+                }
+              }}
+              onMouseDown={(e) => {
+                 if (editor.isEditable) {
+                    e.stopPropagation();
+                 }
+              }}
+              // Ensure the input doesn't steal focus from the popover trigger if not intended.
+              // Or, if it should receive focus, ensure popover still opens via chevron.
+            />
+            <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? 'rotate-180' : ''} ${!editor.isEditable ? 'cursor-default' : 'cursor-pointer'}`} />
+          </div>
         </PopoverTrigger>
-        {editor.isEditable && (
+        {editor.isEditable && isOpen && ( // Conditionally render PopoverContent based on isOpen as well
           <PopoverContent 
-            className="w-auto p-0 mt-1 z-[60]" // Removed red border, p-0 for button list
+            className="w-auto p-0 mt-1 z-[60]"
             side="bottom" 
             align="start"
             onOpenAutoFocus={(e) => e.preventDefault()} 
@@ -71,12 +93,12 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
                   key={option}
                   variant="ghost"
                   size="sm"
-                  className="justify-start rounded-none first:rounded-t-sm last:rounded-b-sm" // Keep some rounding for overall list
+                  className="justify-start rounded-none first:rounded-t-sm last:rounded-b-sm"
                   onClick={(e) => {
                     e.preventDefault(); 
                     handleSelectOption(option);
                   }}
-                  onMouseDown={(e) => e.preventDefault()} // Prevent editor losing focus on click
+                  onMouseDown={(e) => e.preventDefault()} 
                 >
                   {option}
                 </Button>
