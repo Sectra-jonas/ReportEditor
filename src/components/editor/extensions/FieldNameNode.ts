@@ -19,7 +19,7 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        class: 'field-name-node bg-muted hover:bg-secondary p-1 rounded-sm border border-input mx-0.5 text-foreground cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+        class: 'field-name-node bg-accent hover:bg-primary/80 p-1 rounded-sm border border-input mx-0.5 text-accent-foreground cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
       },
     };
   },
