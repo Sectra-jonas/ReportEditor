@@ -4,6 +4,7 @@
 import { ReportContext, type ReportContextType } from '@/contexts/ReportContext';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { REPORT_LOCAL_STORAGE_KEY } from '@/lib/constants';
+import { convertMarkdownToHtml } from '@/lib/utils';
 import type { Report, ReportTemplate } from '@/types';
 import type { Editor } from '@tiptap/react';
 import { useState, type ReactNode, useCallback, useEffect } from 'react';
@@ -320,8 +321,11 @@ export const ReportProvider = ({ children }: { children: ReactNode }) => {
       const impressionText = data.impression;
       
       if (impressionText && impressionText.trim()) {
+        // Convert markdown to HTML before insertion
+        const convertedHtml = convertMarkdownToHtml(impressionText);
+        
         // Insert the AI-generated text with special styling at cursor position
-        const aiGeneratedHtml = `<span data-ai-generated="true" class="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">${impressionText}</span>`;
+        const aiGeneratedHtml = `<div data-ai-generated="true" class="bg-primary/20 dark:bg-primary/15 border border-primary/40 p-4 rounded-lg my-3 border-l-4 border-l-primary shadow-sm relative before:content-['🤖_AI'] before:absolute before:top-2 before:right-3 before:text-xs before:font-semibold before:text-primary before:bg-background before:px-2 before:py-1 before:rounded before:border before:border-primary/30">${convertedHtml}</div>`;
         
         editor.chain().focus().insertContentAt(editor.state.selection.anchor, aiGeneratedHtml).run();
         setIsDirty(true);
