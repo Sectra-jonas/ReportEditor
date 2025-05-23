@@ -18,6 +18,7 @@ import { FieldNameNode } from './extensions/FieldNameNode';
 import { MultiOptionNode } from './extensions/MultiOptionNode';
 // import { MultiOptionNodeView } from './nodeviews/MultiOptionNodeView'; // Important for ReactNodeViewRenderer - MultiOptionNode handles its own NodeView
 import { TabFocusNavigationExtension } from './extensions/TabFocusNavigationExtension';
+import { AIGeneratedNode } from './extensions/AIGeneratedNode';
 
 
 interface RichTextEditorProps {
@@ -55,6 +56,7 @@ const RichTextEditor = ({
         // NodeView is configured directly in MultiOptionNode.ts via addNodeView
       }),
       TabFocusNavigationExtension,
+      AIGeneratedNode,
       Table.configure({
         resizable: true,
       }),

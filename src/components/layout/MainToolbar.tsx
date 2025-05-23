@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  FilePlus2, Save, Trash2, FileDown as ExportPdfIcon, 
+  FilePlus2, Save, Trash2, Brain, 
   ClipboardEdit, ListChecks, ClipboardPaste
 } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
@@ -30,7 +30,7 @@ export const MainToolbar = () => {
     createNewReport, 
     saveCurrentReport, 
     discardCurrentReport, 
-    exportReportToPdf,
+    generateAIImpression,
     insertTemplateIntoReport, // New context function
     currentReport,
     editor, // Get editor instance for disabled state
@@ -45,6 +45,7 @@ export const MainToolbar = () => {
   const [isSaveReportDialogOpen, setIsSaveReportDialogOpen] = useState(false);
   const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
   const [isInsertTemplateDialogOpen, setIsInsertTemplateDialogOpen] = useState(false); // New state
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const handleSaveReport = () => {
     if (currentReport && (currentReport.name === 'Untitled Report' || !currentReport.name)) {
@@ -67,6 +68,15 @@ export const MainToolbar = () => {
 
   const handleInsertTemplate = (template: ReportTemplate) => {
     insertTemplateIntoReport(template);
+  };
+
+  const handleGenerateAIImpression = async () => {
+    setIsGeneratingAI(true);
+    try {
+      await generateAIImpression();
+    } finally {
+      setIsGeneratingAI(false);
+    }
   };
 
   return (
@@ -117,8 +127,13 @@ export const MainToolbar = () => {
 
         <Separator orientation="vertical" className="h-8 mx-2" />
 
-        <Button variant="outline" onClick={exportReportToPdf} disabled={!currentReport}>
-          <ExportPdfIcon className="mr-2 h-4 w-4" /> Export to PDF
+        <Button 
+          variant="outline" 
+          onClick={handleGenerateAIImpression} 
+          disabled={!currentReport || !editor?.isEditable || isGeneratingAI}
+        >
+          <Brain className="mr-2 h-4 w-4" /> 
+          {isGeneratingAI ? "Generating..." : "AI Impression"}
         </Button>
       </div>
 

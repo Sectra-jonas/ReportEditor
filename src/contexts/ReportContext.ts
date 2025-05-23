@@ -17,6 +17,7 @@ export interface ReportContextType {
   loadReport: (reportId: string) => void;
   deleteReport: (reportId: string) => void;
   insertTemplateIntoReport: (template: ReportTemplate) => Promise<void>; // New function
+  generateAIImpression: () => Promise<void>;
 }
 
 export const ReportContext = createContext<ReportContextType | undefined>(undefined);
