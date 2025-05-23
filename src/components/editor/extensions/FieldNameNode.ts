@@ -11,10 +11,10 @@ const fieldNameInputRuleRegex = /\[([^[\]]+)\]$/;
 export const FieldNameNode = Node.create<FieldNameOptions>({
   name: 'fieldName',
   group: 'inline', 
-  content: 'text*', // Allows text content, but we'll manage it as an atom typically
+  content: 'text*', // Allows text content to be editable
   inline: true,
   selectable: true,
-  atom: true, // Treat as a single, indivisible unit
+  atom: false, // Allow content to be editable
 
   addOptions() {
     return {
@@ -40,26 +40,23 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
     return [
       {
         tag: 'span[data-type="field-name"]',
-        // When parsing, Tiptap uses the innerText of the span as the node's content by default.
-        // We want the fieldName attribute to be the source of truth for the display text.
-        // So, renderHTML will use node.attrs.fieldName.
-        // If content is 'text*', it might try to populate it.
-        // For atom nodes, it's often better to manage display solely via renderHTML from attributes.
-        // Let's ensure it takes fieldName from attribute for display consistency.
+        // Parse the field name from the attribute for consistency
         getAttrs: (dom: HTMLElement) => {
-          const fieldName = dom.getAttribute('data-field-name');
+          const fieldName = dom.getAttribute('data-field-name') || dom.textContent?.trim();
           if (fieldName) {
             return { fieldName };
           }
-          return false; // Don't parse if attribute is missing
+          return false; // Don't parse if no field name found
         },
       },
     ];
   },
 
   renderHTML({ HTMLAttributes, node }) {
-    // The visual text of the node is determined by the fieldName attribute.
-    return ['span', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), node.attrs.fieldName];
+    // Allow the content to be rendered and edited directly
+    return ['span', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+      'data-type': 'field-name'
+    }), 0]; // 0 means render the content
   },
   
   // This rule converts "[Text]" into a FieldNameNode as the user types.
@@ -77,7 +74,7 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
             
             tr.delete(start, end);
             
-            const newNode = this.type.create({ fieldName: fieldNameText });
+            const newNode = this.type.create({ fieldName: fieldNameText }, state.schema.text(fieldNameText));
             tr.insert(start, newNode);
             // Set selection to be after the inserted node
             // tr.setSelection(TextSelection.create(tr.doc, start + newNode.nodeSize));
