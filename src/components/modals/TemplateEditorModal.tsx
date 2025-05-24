@@ -42,6 +42,9 @@ export const TemplateEditorModal = ({
 
   const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false);
   const [selectedNodeInfo, setSelectedNodeInfo] = useState<SelectedNodeInfo | null>(null);
+  const [editorApi, setEditorApi] = useState<{ 
+    updateNodeAttributes?: (fieldId: string, newAttrs: Record<string, any>) => void 
+  } | null>(null);
 
   useEffect(() => {
     // if modal opens and no template, create a new one
@@ -62,27 +65,7 @@ export const TemplateEditorModal = ({
     if (!isTemplateDirty) setIsTemplateDirty(true);
   };
 
-  const handleUpdateNodeAttributesInModal = (fieldId: string, newAttrs: Record<string, any>) => {
-    if (templateEditor) { 
-      let targetNodePos: { pos: number; node: PMNode } | null = null; 
-      templateEditor.state.doc.descendants((node, pos) => {
-        if (node.attrs.fieldId === fieldId) {
-          targetNodePos = { pos, node };
-          return false; 
-        }
-        return true;
-      });
-      if (targetNodePos) {
-        templateEditor.chain().focus().setNodeMarkup(targetNodePos.pos, undefined, { ...targetNodePos.node.attrs, ...newAttrs }).run();
-        setSelectedNodeInfo(prev => {
-          if (prev && prev.id === fieldId) {
-            return { ...prev, attrs: { ...prev.attrs, ...newAttrs } };
-          }
-          return prev;
-        });
-      }
-    }
-  };
+  // Removed handleUpdateNodeAttributesInModal
 
   return (
     <>
@@ -114,14 +97,19 @@ export const TemplateEditorModal = ({
                   content={currentTemplate?.content}
                   setEditorInstance={setTemplateEditor}
                   onUpdate={handleEditorUpdate}
-                  onNodeSelectionChange={setSelectedNodeInfo} // Added prop
-                  // selectedNodeInfo={selectedNodeInfo} // TemplateEditor manages its own internal state now
-                  // onUpdateNodeAttributes={handleUpdateNodeAttributesInModal} // TemplateEditor defines its own updater now
+                  onNodeSelectionChange={setSelectedNodeInfo}
+                  exposeFunctions={setEditorApi} // Pass the state setter for editor API
                 />
               </div>
               <TemplateEditorSidebar
-                selectedNode={selectedNodeInfo} // Pass state
-                onUpdateNodeAttributes={handleUpdateNodeAttributesInModal} // Pass handler
+                selectedNode={selectedNodeInfo}
+                onUpdateNodeAttributes={(fieldId, newAttrs) => {
+                  if (editorApi?.updateNodeAttributes) {
+                    editorApi.updateNodeAttributes(fieldId, newAttrs);
+                  } else {
+                    console.warn('editorApi.updateNodeAttributes is not yet available');
+                  }
+                }}
               />
             </div>
           </SidebarProvider>

@@ -8,7 +8,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Heading from '@tiptap/extension-heading';
 import type { Editor } from '@tiptap/react';
 import { Node as PMNode } from 'prosemirror-model'; // Import Prosemirror Node type
-import { useEffect, useState } from 'react'; // Added useState
+import { useEffect, useState, useCallback } from 'react'; // Add useCallback
 import EditorToolbar from './EditorToolbar'; // Can reuse the same toolbar
 
 // Custom Extensions for previewing in template editor (optional, but good for consistency)
@@ -28,9 +28,9 @@ interface TemplateEditorProps {
   setEditorInstance?: (editor: Editor | null) => void;
   // Callbacks to inform parent about selection and to allow parent to trigger updates
   onNodeSelectionChange?: (nodeInfo: SelectedNodeInfo | null) => void;
-  // This prop allows a parent to imperatively request an update if needed,
-  // but primary updates come from the sidebar directly calling the function exposed by this component.
-  // For this task, we focus on the internal handleUpdateNodeAttributes.
+  exposeFunctions?: (fns: { // New prop to expose functions
+    updateNodeAttributes: (fieldId: string, newAttrs: Record<string, any>) => void 
+  }) => void;
 }
 
 export interface SelectedNodeInfo {
@@ -45,6 +45,7 @@ const TemplateEditor = ({
   onUpdate,
   setEditorInstance,
   onNodeSelectionChange,
+  exposeFunctions, // Destructure new prop
 }: TemplateEditorProps) => {
 
   const [selectedNodeInfo, setSelectedNodeInfoInternal] = useState<SelectedNodeInfo | null>(null);
@@ -57,7 +58,7 @@ const TemplateEditor = ({
   }, [selectedNodeInfo, onNodeSelectionChange]);
 
 
-  const handleUpdateNodeAttributes = (fieldId: string, newAttrs: Record<string, any>) => {
+  const handleUpdateNodeAttributes = useCallback((fieldId: string, newAttrs: Record<string, any>) => {
     if (!editor) return;
     let targetNodePos: { pos: number; node: PMNode } | null = null;
     editor.state.doc.descendants((node, pos) => {
@@ -69,13 +70,9 @@ const TemplateEditor = ({
     });
     if (targetNodePos) {
       editor.chain().focus().setNodeMarkup(targetNodePos.pos, undefined, { ...targetNodePos.node.attrs, ...newAttrs }).run();
-      // After updating, re-select the node to refresh attributes in the sidebar
-      // This ensures the sidebar reflects the latest attributes if it's not already two-way bound.
-      // This might cause a re-render if the parent directly uses the selectedNodeInfo state for the sidebar.
-      // For now, let's update the internal state as well.
       const updatedNode = editor.state.doc.nodeAt(targetNodePos.pos);
       if (updatedNode) {
-        setSelectedNodeInfoInternal({
+        setSelectedNodeInfoInternal({ // Update internal state, which triggers onNodeSelectionChange
           id: fieldId,
           type: updatedNode.type.name,
           attrs: { ...updatedNode.attrs },
@@ -83,13 +80,14 @@ const TemplateEditor = ({
         });
       }
     }
-  };
+  }, [editor, setSelectedNodeInfoInternal]); // Added editor and setSelectedNodeInfoInternal to dependency array
 
-  // Exposing handleUpdateNodeAttributes (e.g. for parent component to use, or via ref)
-  // For now, this function is defined. How it's passed to the sidebar will be handled by parent.
-  // If TemplateEditor is a child of a page that also renders TemplateEditorSidebar, that page
-  // would get this function (e.g. via a callback passed to setEditorInstance or a ref)
-  // and then pass it to TemplateEditorSidebar.
+  // Expose handleUpdateNodeAttributes via the exposeFunctions prop
+  useEffect(() => {
+    if (exposeFunctions) {
+      exposeFunctions({ updateNodeAttributes: handleUpdateNodeAttributes });
+    }
+  }, [exposeFunctions, handleUpdateNodeAttributes]);
 
 
   const editor = useEditor({
