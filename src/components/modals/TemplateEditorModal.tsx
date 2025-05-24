@@ -10,11 +10,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import TemplateEditor from "@/components/editor/TemplateEditor";
+import TemplateEditor, { SelectedNodeInfo } from "@/components/editor/TemplateEditor"; // Import SelectedNodeInfo
 import { useTemplates } from "@/contexts/TemplateContext";
 import { useEffect, useState } from "react";
 import { SaveFileDialog } from "./SaveFileDialog";
 import { FileUp, FileDown, FilePlus2 } from "lucide-react";
+import { SidebarProvider } from "@/components/ui/sidebar"; // Added
+import TemplateEditorSidebar from "@/components/editor/TemplateEditorSidebar"; // Added
+import { Node as PMNode } from 'prosemirror-model'; // Added for handleUpdateNodeAttributesInModal
+
 
 interface TemplateEditorModalProps {
   isOpen: boolean;
@@ -37,6 +41,7 @@ export const TemplateEditorModal = ({
   } = useTemplates();
 
   const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false);
+  const [selectedNodeInfo, setSelectedNodeInfo] = useState<SelectedNodeInfo | null>(null);
 
   useEffect(() => {
     // if modal opens and no template, create a new one
@@ -57,15 +62,36 @@ export const TemplateEditorModal = ({
     if (!isTemplateDirty) setIsTemplateDirty(true);
   };
 
+  const handleUpdateNodeAttributesInModal = (fieldId: string, newAttrs: Record<string, any>) => {
+    if (templateEditor) { 
+      let targetNodePos: { pos: number; node: PMNode } | null = null; 
+      templateEditor.state.doc.descendants((node, pos) => {
+        if (node.attrs.fieldId === fieldId) {
+          targetNodePos = { pos, node };
+          return false; 
+        }
+        return true;
+      });
+      if (targetNodePos) {
+        templateEditor.chain().focus().setNodeMarkup(targetNodePos.pos, undefined, { ...targetNodePos.node.attrs, ...newAttrs }).run();
+        setSelectedNodeInfo(prev => {
+          if (prev && prev.id === fieldId) {
+            return { ...prev, attrs: { ...prev.attrs, ...newAttrs } };
+          }
+          return prev;
+        });
+      }
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw] h-[80vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[85vw] xl:max-w-[75vw] h-[85vh] flex flex-col p-0"> {/* Adjusted width and height */}
           <DialogHeader className="p-6 pb-2">
             <DialogTitle>Report Template Editor</DialogTitle>
-            <DialogDescription>
-              Create, edit, load, and save report templates.
-              Use <code>[FieldName]</code> for replaceable fields and <code>[Option1|Option2|Option3]</code> for multiple choice fields.
+            <DialogDescription className="text-gray-700 dark:text-gray-300"> {/* Applied clearer text color */}
+              Design your template by dragging fields from the sidebar. Select fields in the editor to modify their properties.
             </DialogDescription>
           </DialogHeader>
           
@@ -80,14 +106,25 @@ export const TemplateEditorModal = ({
               <FileDown className="mr-2 h-4 w-4" /> Save Template
             </Button>
           </div>
-
-          <div className="flex-grow overflow-hidden p-6 pt-2">
-            <TemplateEditor
-              content={currentTemplate?.content}
-              setEditorInstance={setTemplateEditor}
-              onUpdate={handleEditorUpdate}
-            />
-          </div>
+          
+          <SidebarProvider> {/* Added SidebarProvider */}
+            <div className="flex flex-1 overflow-hidden p-6 pt-2"> {/* Main content area with flex layout */}
+              <div className="flex-grow h-full overflow-y-auto pr-2"> {/* Editor container */}
+                <TemplateEditor
+                  content={currentTemplate?.content}
+                  setEditorInstance={setTemplateEditor}
+                  onUpdate={handleEditorUpdate}
+                  onNodeSelectionChange={setSelectedNodeInfo} // Added prop
+                  // selectedNodeInfo={selectedNodeInfo} // TemplateEditor manages its own internal state now
+                  // onUpdateNodeAttributes={handleUpdateNodeAttributesInModal} // TemplateEditor defines its own updater now
+                />
+              </div>
+              <TemplateEditorSidebar
+                selectedNode={selectedNodeInfo} // Pass state
+                onUpdateNodeAttributes={handleUpdateNodeAttributesInModal} // Pass handler
+              />
+            </div>
+          </SidebarProvider>
 
           <DialogFooter className="p-6 pt-2 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>

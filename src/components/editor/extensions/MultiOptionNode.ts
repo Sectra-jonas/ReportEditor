@@ -38,6 +38,16 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
         parseHTML: element => element.getAttribute('data-current-value'),
         renderHTML: attributes => ({ 'data-current-value': attributes.currentValue }),
       },
+      fieldId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-field-id'),
+        renderHTML: attributes => (attributes.fieldId ? { 'data-field-id': attributes.fieldId } : {}),
+      },
+      fieldName: { // Added fieldName attribute
+        default: 'Multi-Option',
+        parseHTML: element => element.getAttribute('data-field-name'),
+        renderHTML: attributes => (attributes.fieldName ? { 'data-field-name': attributes.fieldName } : {}),
+      },
     };
   },
 
@@ -48,10 +58,26 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
         getAttrs: (dom: HTMLElement) => {
           const options = dom.getAttribute('data-options');
           const currentValue = dom.getAttribute('data-current-value');
-          if (options) {
-            // If currentValue isn't set, default to the first option.
-            // The NodeView will also handle this logic.
-            return { options, currentValue: currentValue || options.split('|')[0]?.trim() };
+          const fieldId = dom.getAttribute('data-field-id');
+          const fieldName = dom.getAttribute('data-field-name'); // Parse fieldName
+          
+          if (options) { // 'options' is considered essential for this node type
+            const attrs: { 
+              options: string; 
+              currentValue: string; 
+              fieldId?: string | null;
+              fieldName?: string | null; // Added fieldName to attrs type
+            } = {
+              options,
+              currentValue: currentValue || options.split('|')[0]?.trim(),
+            };
+            if (fieldId) {
+              attrs.fieldId = fieldId;
+            }
+            if (fieldName) { // Add fieldName if parsed
+              attrs.fieldName = fieldName;
+            }
+            return attrs;
           }
           return false; // Don't parse if essential 'data-options' attribute is missing
         },
@@ -62,12 +88,13 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
   renderHTML({ HTMLAttributes, node }) {
     // This is a fallback if NodeView is not used or fails.
     // The NodeView will primarily handle rendering.
+    // HTMLAttributes already includes data-options, data-current-value, and data-field-id (if present)
+    // due to their renderHTML definitions in addAttributes.
     return [
       'span',
-      mergeAttributes(HTMLAttributes, { // Use raw HTMLAttributes from options for base
+      mergeAttributes(HTMLAttributes, { 
         'data-type': 'multi-option', // Ensure this is present for parsing
-        'data-options': node.attrs.options,
-        'data-current-value': node.attrs.currentValue,
+        // The class below is for fallback styling if NodeView fails
         class: 'multi-option-node-fallback-render bg-accent text-accent-foreground p-1 rounded-sm border border-input mx-0.5',
       }),
       node.attrs.currentValue, // Display current value as fallback

@@ -14,12 +14,12 @@ import EditorToolbar from './EditorToolbar'; // Can reuse the same toolbar
 // Custom Extensions for previewing in template editor (optional, but good for consistency)
 // These would be readonly versions or simplified versions if full interactivity is not needed here.
 // For now, template editor will just be a standard rich text editor.
-// import { FieldNameNode } from './extensions/FieldNameNode';
-// import { MultiOptionNode } from './extensions/MultiOptionNode';
+import { FieldNameNode } from './extensions/FieldNameNode'; // Ensure this is imported
+import { MultiOptionNode } from './extensions/MultiOptionNode'; // Ensure this is imported
 
 // Import the custom node extensions
-import WysiwygFieldNode from './extensions/WysiwygFieldNode';
-import WysiwygMultiOptionNode from './extensions/WysiwygMultiOptionNode';
+// import WysiwygFieldNode from './extensions/WysiwygFieldNode'; // REMOVE
+// import WysiwygMultiOptionNode from './extensions/WysiwygMultiOptionNode'; // REMOVE
 
 
 interface TemplateEditorProps {
@@ -104,12 +104,12 @@ const TemplateEditor = ({
       Heading.configure({
         levels: [1, 2, 3],
       }),
-      // Register the custom node extensions
-      WysiwygFieldNode,
-      WysiwygMultiOptionNode,
+      // Register the correct custom node extensions
+      FieldNameNode,    // Ensure this is present
+      MultiOptionNode,  // Ensure this is present
+      // WysiwygFieldNode,         // Ensure this is REMOVED
+      // WysiwygMultiOptionNode,   // Ensure this is REMOVED
       // To see the fields render in the template editor itself (non-interactive or with limited interaction):
-      // FieldNameNode, // This would make [FieldName] typed here become a node
-      // MultiOptionNode, // This would make [OptionA|OptionB] typed here become a node
       // Note: If added here, ensure no conflicts with the main report editor's interactive versions.
       // The input rules in these nodes will convert [text] as you type.
     ],
@@ -123,14 +123,54 @@ const TemplateEditor = ({
       const { selection } = currentEditor.state;
 
       // Check for NodeSelection first (when a node is selected by clicking it)
-      if (selection instanceof currentEditor.state.schema.nodes.wysiwygField?.constructor || // Check if it's a NodeSelection of our type
+      // Adjusted to check for fieldName and multiOption as well as the old types for safety during transition
+      if (selection instanceof currentEditor.state.schema.nodes.fieldName?.constructor ||
+          selection instanceof currentEditor.state.schema.nodes.multiOption?.constructor ||
+          selection instanceof currentEditor.state.schema.nodes.wysiwygField?.constructor || 
           selection instanceof currentEditor.state.schema.nodes.wysiwygMultiOptionField?.constructor) {
           // This part is tricky. Tiptap's NodeSelection 'node' might not be what we expect.
           // editor.isActive is more reliable for custom atom nodes.
       }
 
       // Using editor.isActive for a more general approach
-      if (currentEditor.isActive('wysiwygField')) {
+      // Prioritize new node types, then check old ones for robustness during transition
+      if (currentEditor.isActive('fieldName')) {
+        const attrs = currentEditor.getAttributes('fieldName');
+        const fieldId = attrs.fieldId; // Assuming fieldId exists
+        if (fieldId) {
+          let foundPos = -1;
+          let foundNode: PMNode | null = null;
+          currentEditor.state.doc.descendants((node, pos) => {
+            if (node.type.name === 'fieldName' && node.attrs.fieldId === fieldId) {
+              foundPos = pos;
+              foundNode = node;
+              return false; // Stop iteration
+            }
+            return true;
+          });
+          if (foundPos !== -1 && foundNode) {
+            nodeInfo = { id: fieldId, type: 'fieldName', attrs: { ...foundNode.attrs }, pos: foundPos };
+          }
+        }
+      } else if (currentEditor.isActive('multiOption')) {
+        const attrs = currentEditor.getAttributes('multiOption');
+        const fieldId = attrs.fieldId; // Assuming fieldId exists
+        if (fieldId) {
+          let foundPos = -1;
+          let foundNode: PMNode | null = null;
+          currentEditor.state.doc.descendants((node, pos) => {
+            if (node.type.name === 'multiOption' && node.attrs.fieldId === fieldId) {
+              foundPos = pos;
+              foundNode = node;
+              return false; // Stop iteration
+            }
+            return true;
+          });
+          if (foundPos !== -1 && foundNode) {
+            nodeInfo = { id: fieldId, type: 'multiOption', attrs: { ...foundNode.attrs }, pos: foundPos };
+          }
+        }
+      } else if (currentEditor.isActive('wysiwygField')) { // Fallback for old type
         const attrs = currentEditor.getAttributes('wysiwygField');
         const fieldId = attrs.fieldId;
         if (fieldId) {
@@ -148,7 +188,7 @@ const TemplateEditor = ({
             nodeInfo = { id: fieldId, type: 'wysiwygField', attrs: { ...foundNode.attrs }, pos: foundPos };
           }
         }
-      } else if (currentEditor.isActive('wysiwygMultiOptionField')) {
+      } else if (currentEditor.isActive('wysiwygMultiOptionField')) { // Fallback for old type
         const attrs = currentEditor.getAttributes('wysiwygMultiOptionField');
         const fieldId = attrs.fieldId;
         if (fieldId) {
@@ -186,19 +226,45 @@ const TemplateEditor = ({
             const dropPositionData = editor.view.posAtCoords(coordinates);
             if (!dropPositionData) return false;
             const dropPos = dropPositionData.pos;
-            let nodeAttrs: Record<string, any> = {
-              fieldId: `field-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
-            };
-            if (fieldType === 'wysiwygField') {
-              nodeAttrs.fieldName = 'New Field';
-            } else if (fieldType === 'wysiwygMultiOptionField') {
-              nodeAttrs.fieldName = 'New Multi-Option';
+            const generatedFieldId = `field-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+            let nodeToInsert: Record<string, any> | null = null;
+
+            if (fieldType === 'fieldName') {
+              nodeToInsert = {
+                type: 'fieldName',
+                attrs: {
+                  fieldId: generatedFieldId,
+                  fieldName: 'New Field', // Default name
+                },
+                content: [{ type: 'text', text: 'New Field' }], // Initial content
+              };
+            } else if (fieldType === 'multiOption') {
+              nodeToInsert = {
+                type: 'multiOption',
+                attrs: {
+                  fieldId: generatedFieldId,
+                  fieldName: 'New Multi-Option', // Default name for the group
+                  options: 'Option 1|Option 2', // Default options string
+                  currentValue: 'Option 1', // Default current value
+                },
+              };
+            } else if (fieldType === 'wysiwygField' || fieldType === 'wysiwygMultiOptionField') {
+              // Handling for old types if they are still somehow dragged (e.g. old UI not updated)
+              // This part can be removed if only 'fieldName' and 'multiOption' are draggable.
+              let nodeAttrs: Record<string, any> = { fieldId: generatedFieldId };
+              if (fieldType === 'wysiwygField') {
+                nodeAttrs.fieldName = 'New W-Field';
+              } else { // wysiwygMultiOptionField
+                nodeAttrs.fieldName = 'New W-MultiOption';
+                // Default options for wysiwygMultiOptionField are part of its attribute definition
+              }
+              nodeToInsert = { type: fieldType, attrs: nodeAttrs };
             }
-            editor.chain().focus().insertContentAt(dropPos, {
-              type: fieldType,
-              attrs: nodeAttrs,
-            }).run();
-            return true;
+
+            if (nodeToInsert) {
+              editor.chain().focus().insertContentAt(dropPos, nodeToInsert).run();
+              return true; // Indicate that the drop was handled
+            }
           }
         } catch (error) {
           console.error("Error handling drop:", error);

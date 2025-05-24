@@ -63,8 +63,10 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
   return (
     <NodeViewWrapper
       as="span"
-      className={`multi-option-node group inline-flex items-center bg-accent text-accent-foreground p-1 rounded-sm mx-0.5 cursor-pointer relative transition-colors hover:bg-primary/80
-        ${selected ? 'ring-2 ring-ring ring-offset-1' : 'border border-input'}
+      className={`multi-option-node group inline-flex items-center p-1 rounded-sm mx-0.5 cursor-pointer relative transition-colors 
+        bg-purple-100 text-purple-800 hover:bg-purple-200 
+        dark:bg-purple-900 dark:text-purple-200 dark:hover:bg-purple-800
+        ${selected ? 'ring-2 ring-ring ring-offset-1' : 'border border-purple-300 dark:border-purple-700'}
         ${!editor.isEditable ? 'cursor-default opacity-80' : ''}
       `}
       draggable="true" 
@@ -77,7 +79,7 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleFinishEdit}
           onKeyDown={handleKeyDown}
-          className="bg-transparent border-none outline-none text-accent-foreground min-w-[60px] w-auto"
+          className="bg-transparent border-none outline-none text-purple-800 dark:text-purple-200 min-w-[60px] w-auto"
           style={{ width: `${Math.max(editValue.length * 8, 60)}px` }}
         />
       ) : (

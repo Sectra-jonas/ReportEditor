@@ -19,7 +19,7 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        class: 'field-name-node bg-accent hover:bg-primary/80 p-1 rounded-sm border border-input mx-0.5 text-accent-foreground cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+        class: 'field-name-node bg-blue-100 hover:bg-blue-200 p-1 rounded-sm border border-blue-300 mx-0.5 text-blue-800 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 dark:border-blue-700',
       },
     };
   },
@@ -29,9 +29,14 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
       fieldName: {
         default: 'Field',
         parseHTML: element => element.getAttribute('data-field-name'),
-        renderHTML: attributes => ({ 
+        renderHTML: attributes => ({
           'data-field-name': attributes.fieldName,
         }),
+      },
+      fieldId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-field-id'),
+        renderHTML: attributes => (attributes.fieldId ? { 'data-field-id': attributes.fieldId } : {}),
       },
     };
   },
@@ -40,23 +45,45 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
     return [
       {
         tag: 'span[data-type="field-name"]',
-        // Parse the field name from the attribute for consistency
         getAttrs: (dom: HTMLElement) => {
           const fieldName = dom.getAttribute('data-field-name') || dom.textContent?.trim();
+          const fieldId = dom.getAttribute('data-field-id');
+          const attrs: { fieldName?: string; fieldId?: string | null } = {};
+
           if (fieldName) {
-            return { fieldName };
+            attrs.fieldName = fieldName;
+          } else {
+            // If there's no fieldName from data-attribute or textContent, it might be an invalid node.
+            // However, to prevent errors, we can allow it to be parsed and potentially corrected later.
+            // Returning false would mean the node isn't parsed at all.
+            // Depending on desired strictness, this could return false.
+            // For now, parse if at least one identifiable attribute is present or it has the data-type.
           }
-          return false; // Don't parse if no field name found
+
+          // fieldId is optional, so it can be null if not present
+          attrs.fieldId = fieldId;
+          
+          // Only parse if we have a fieldName, or at least a fieldId if fieldName is missing.
+          // Or, if the tag itself is enough to identify it as this node type.
+          // Given the input rule creates content, fieldName should ideally always exist.
+          if (attrs.fieldName || attrs.fieldId) {
+              return attrs;
+          }
+          // If the element is just <span data-type="field-name"></span> with no other attributes
+          // and no text content, it might still be valid if defaults are applied.
+          // Let's assume it's valid if the tag matches.
+          return {}; // Let default attributes apply
         },
       },
     ];
   },
 
   renderHTML({ HTMLAttributes, node }) {
-    // Allow the content to be rendered and edited directly
+    // HTMLAttributes will include data-field-name and data-field-id (if present)
+    // due to their renderHTML definitions in addAttributes.
     return ['span', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
       'data-type': 'field-name'
-    }), 0]; // 0 means render the content
+    }), 0]; // 0 means render the content (which is node.attrs.fieldName)
   },
   
   // This rule converts "[Text]" into a FieldNameNode as the user types.

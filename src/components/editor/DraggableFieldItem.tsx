@@ -21,9 +21,9 @@ const DraggableFieldItem: React.FC<DraggableFieldItemProps> = ({
     <div
       {...props} // Spreads draggable, onDragStart, etc.
       className={cn(
-        'flex items-center p-2.5 mb-2 border rounded-md cursor-grab active:cursor-grabbing',
+        'flex items-center p-2.5 mb-2 border border-gray-300 rounded-md cursor-grab active:cursor-grabbing', // Explicit light mode border
         'bg-card hover:bg-muted transition-colors duration-150 ease-in-out shadow-sm',
-        'dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700', // Dark mode styles
+        'dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-600', // Adjusted dark mode border for consistency (slate-700 was a bit dark for border with bg-slate-800)
         className
       )}
     >
