@@ -122,15 +122,8 @@ const TemplateEditor = ({
       let nodeInfo: SelectedNodeInfo | null = null;
       const { selection } = currentEditor.state;
 
-      // Check for NodeSelection first (when a node is selected by clicking it)
-      // Adjusted to check for fieldName and multiOption as well as the old types for safety during transition
-      if (selection instanceof currentEditor.state.schema.nodes.fieldName?.constructor ||
-          selection instanceof currentEditor.state.schema.nodes.multiOption?.constructor ||
-          selection instanceof currentEditor.state.schema.nodes.wysiwygField?.constructor || 
-          selection instanceof currentEditor.state.schema.nodes.wysiwygMultiOptionField?.constructor) {
-          // This part is tricky. Tiptap's NodeSelection 'node' might not be what we expect.
-          // editor.isActive is more reliable for custom atom nodes.
-      }
+      // The problematic instanceof check has been removed.
+      // The logic below using editor.isActive is now the primary method.
 
       // Using editor.isActive for a more general approach
       // Prioritize new node types, then check old ones for robustness during transition
