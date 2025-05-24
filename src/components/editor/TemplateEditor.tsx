@@ -84,10 +84,14 @@ const TemplateEditor = ({
 
   // Expose handleUpdateNodeAttributes via the exposeFunctions prop
   useEffect(() => {
-    if (exposeFunctions) {
+    if (exposeFunctions && editor) { // Check if editor is initialized
       exposeFunctions({ updateNodeAttributes: handleUpdateNodeAttributes });
     }
-  }, [exposeFunctions, handleUpdateNodeAttributes]);
+    // Optional: If editor becomes null later and functions should be revoked
+    // else if (exposeFunctions) {
+    //   exposeFunctions({ updateNodeAttributes: () => console.warn("Editor not available") });
+    // }
+  }, [exposeFunctions, handleUpdateNodeAttributes, editor]); // Added editor to dependency array
 
 
   const editor = useEditor({
@@ -264,22 +268,17 @@ const TemplateEditor = ({
     },
   });
 
-  // This effect is to pass the editor instance and potentially the update function to the parent
+  // This effect is to pass the editor instance to the parent
   useEffect(() => {
     if (setEditorInstance) {
-      // Pass the editor instance, and now also the handleUpdateNodeAttributes function
-      // The parent component can then decide how to use this.
-      // A common pattern is to pass an object:
-      // setEditorInstance({ editor, updateAttributes: handleUpdateNodeAttributes });
-      // For now, just passing editor. The parent will need handleUpdateNodeAttributes separately.
-      setEditorInstance(editor); 
+      setEditorInstance(editor);
     }
     return () => {
       if (setEditorInstance) {
         setEditorInstance(null);
       }
     };
-  }, [editor, setEditorInstance, handleUpdateNodeAttributes]); // Added handleUpdateNodeAttributes to dependency array
+  }, [editor, setEditorInstance]); // Removed handleUpdateNodeAttributes from dependency array
 
 
   // Content update logic remains the same
