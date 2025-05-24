@@ -214,7 +214,9 @@ const TemplateEditor = ({
         if (!data) return false;
         try {
           const { type: fieldType } = JSON.parse(data);
-          if (fieldType === 'wysiwygField' || fieldType === 'wysiwygMultiOptionField') {
+
+          // Primary check for current, correct field types
+          if (fieldType === 'fieldName' || fieldType === 'multiOption') {
             const coordinates = { left: event.clientX, top: event.clientY };
             const dropPositionData = editor.view.posAtCoords(coordinates);
             if (!dropPositionData) return false;
@@ -231,7 +233,7 @@ const TemplateEditor = ({
                 },
                 content: [{ type: 'text', text: 'New Field' }], // Initial content
               };
-            } else if (fieldType === 'multiOption') {
+            } else if (fieldType === 'multiOption') { // This will be fieldType === 'multiOption'
               nodeToInsert = {
                 type: 'multiOption',
                 attrs: {
@@ -241,24 +243,16 @@ const TemplateEditor = ({
                   currentValue: 'Option 1', // Default current value
                 },
               };
-            } else if (fieldType === 'wysiwygField' || fieldType === 'wysiwygMultiOptionField') {
-              // Handling for old types if they are still somehow dragged (e.g. old UI not updated)
-              // This part can be removed if only 'fieldName' and 'multiOption' are draggable.
-              let nodeAttrs: Record<string, any> = { fieldId: generatedFieldId };
-              if (fieldType === 'wysiwygField') {
-                nodeAttrs.fieldName = 'New W-Field';
-              } else { // wysiwygMultiOptionField
-                nodeAttrs.fieldName = 'New W-MultiOption';
-                // Default options for wysiwygMultiOptionField are part of its attribute definition
-              }
-              nodeToInsert = { type: fieldType, attrs: nodeAttrs };
             }
+            // The fallback 'else if (fieldType === 'wysiwygField' || fieldType === 'wysiwygMultiOptionField')'
+            // has been removed as per recommendation, assuming the sidebar only drags new types.
 
             if (nodeToInsert) {
               editor.chain().focus().insertContentAt(dropPos, nodeToInsert).run();
               return true; // Indicate that the drop was handled
             }
           }
+          // If the fieldType is not 'fieldName' or 'multiOption', it will fall through and return false.
         } catch (error) {
           console.error("Error handling drop:", error);
           return false;
