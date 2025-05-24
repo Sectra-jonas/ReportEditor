@@ -4,6 +4,7 @@
 import { ReportContext, type ReportContextType } from '@/contexts/ReportContext';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { REPORT_LOCAL_STORAGE_KEY } from '@/lib/constants';
+import { convertMarkdownToHtml } from '@/lib/utils';
 import type { Report, ReportTemplate } from '@/types';
 import type { Editor } from '@tiptap/react';
 import { useState, type ReactNode, useCallback, useEffect } from 'react';
@@ -128,7 +129,7 @@ export const ReportProvider = ({ children }: { children: ReactNode }) => {
     // Replace [OptionA|OptionB|OptionC] with <span data-type="multi-option" data-options="OptionA|OptionB|OptionC" data-current-value="OptionA">OptionA</span>
     processedContent = processedContent.replace(/\[(([^\]|]+?\|)+[^\]|]+?)\]/g, (match, optionsStringMatch) => {
       const optionsString = optionsStringMatch.trim();
-      const options = optionsString.split('|').map(opt => opt.trim());
+      const options = optionsString.split('|').map((opt: string) => opt.trim());
       const currentValue = options[0] || 'Select'; 
       const sanitizedOptionsString = options.join('|'); 
       return `<span data-type="multi-option" data-options="${sanitizedOptionsString}" data-current-value="${currentValue}">${currentValue}</span>`;
@@ -288,6 +289,61 @@ export const ReportProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Template Inserted", description: `Content from "${template.name}" inserted.` });
   }, [currentReport, editor, setIsDirty, toast, processTemplateContent]);
 
+  const generateAIImpression = useCallback(async () => {
+    if (!currentReport || !editor || !editor.isEditable) {
+      toast({ title: "Error", description: "No active report or editor is not editable.", variant: "destructive" });
+      return;
+    }
+
+    const currentContent = editor.getText();
+    if (!currentContent.trim()) {
+      toast({ title: "Error", description: "Please add some content to the report before generating an AI impression.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      toast({ title: "Generating AI Impression", description: "Please wait while the AI analyzes your report..." });
+      
+      const response = await fetch('/api/ai-impression', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportContent: currentContent }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate AI impression');
+      }
+
+      const impressionText = data.impression;
+      
+      if (impressionText && impressionText.trim()) {
+        // Convert markdown to HTML before insertion
+        const convertedHtml = convertMarkdownToHtml(impressionText);
+        
+        // Insert the AI-generated text with special styling at cursor position
+        const aiGeneratedHtml = `<div data-ai-generated="true" class="bg-primary/20 dark:bg-primary/15 border border-primary/40 p-4 rounded-lg my-3 border-l-4 border-l-primary shadow-sm relative before:content-['🤖_AI'] before:absolute before:top-2 before:right-3 before:text-xs before:font-semibold before:text-primary before:bg-background before:px-2 before:py-1 before:rounded before:border before:border-primary/30">${convertedHtml}</div>`;
+        
+        editor.chain().focus().insertContentAt(editor.state.selection.anchor, aiGeneratedHtml).run();
+        setIsDirty(true);
+        
+        toast({ title: "AI Impression Generated", description: "The AI impression has been inserted into your report." });
+      } else {
+        toast({ title: "Error", description: "AI generated an empty response. Please try again.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error('AI Impression Error:', error);
+      toast({ 
+        title: "AI Generation Failed", 
+        description: error.message || "Failed to generate AI impression. Please try again.", 
+        variant: "destructive" 
+      });
+    }
+  }, [currentReport, editor, setIsDirty, toast]);
+
 
   useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -309,6 +365,7 @@ export const ReportProvider = ({ children }: { children: ReactNode }) => {
     loadReport,
     deleteReport,
     insertTemplateIntoReport,
+    generateAIImpression,
   };
 
   return <ReportContext.Provider value={value}>{children}</ReportContext.Provider>;
