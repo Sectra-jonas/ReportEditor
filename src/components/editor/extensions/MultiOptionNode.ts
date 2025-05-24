@@ -102,6 +102,9 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
             tr.delete(start, end);
             const newNode = this.type.create({ options: optionsString, currentValue });
             tr.insert(start, newNode);
+            // Add a space after the field to ensure cursor can be placed after it
+            const spaceNode = state.schema.text(' ');
+            tr.insert(start + newNode.nodeSize, spaceNode);
           }
         },
       }),
@@ -116,10 +119,16 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
         const optionsString = options.join('|');
         const currentValue = attributes?.currentValue || options[0];
         
-        return commands.insertContent({
-          type: this.name,
-          attrs: { options: optionsString, currentValue, nodeId },
-        });
+        return commands.insertContent([
+          {
+            type: this.name,
+            attrs: { options: optionsString, currentValue, nodeId },
+          },
+          {
+            type: 'text',
+            text: ' ',
+          }
+        ]);
       },
 
       updateMultiOptionNode: (nodeId: string, attrs: { options?: string[]; currentValue?: string }) => ({ tr, state }: any) => {

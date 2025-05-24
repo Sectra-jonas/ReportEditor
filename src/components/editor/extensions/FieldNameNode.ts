@@ -73,6 +73,7 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
       'data-node-type': 'field'
     }), 0]; // 0 means render the content
   },
+
   
   // This rule converts "[Text]" into a FieldNameNode as the user types.
   addInputRules() {
@@ -89,10 +90,14 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
             
             tr.delete(start, end);
             
-            const newNode = this.type.create({ fieldName: fieldNameText }, state.schema.text(fieldNameText));
+            const newNode = this.type.create(
+              { fieldName: fieldNameText, defaultText: fieldNameText },
+              state.schema.text(fieldNameText)
+            );
             tr.insert(start, newNode);
-            // Set selection to be after the inserted node
-            // tr.setSelection(TextSelection.create(tr.doc, start + newNode.nodeSize));
+            // Add a space after the field to ensure cursor can be placed after it
+            const spaceNode = state.schema.text(' ');
+            tr.insert(start + newNode.nodeSize, spaceNode);
           }
         },
       }),
@@ -104,13 +109,19 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
       insertField: (attributes?: { fieldName?: string; defaultText?: string; nodeId?: string }) => ({ commands }: any) => {
         const nodeId = attributes?.nodeId || `field-${Date.now()}`;
         const fieldName = attributes?.fieldName || 'Field';
-        const defaultText = attributes?.defaultText || '';
+        const defaultText = attributes?.defaultText || fieldName;
         
-        return commands.insertContent({
-          type: this.name,
-          attrs: { fieldName, defaultText, nodeId },
-          content: [{ type: 'text', text: defaultText || fieldName }],
-        });
+        return commands.insertContent([
+          {
+            type: this.name,
+            attrs: { fieldName, defaultText, nodeId },
+            content: [{ type: 'text', text: defaultText }],
+          },
+          {
+            type: 'text',
+            text: ' ',
+          }
+        ]);
       },
 
       updateFieldNode: (nodeId: string, attrs: { fieldName?: string; defaultText?: string }) => ({ tr, state }: any) => {

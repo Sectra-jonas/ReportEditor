@@ -6,6 +6,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
 import Heading from '@tiptap/extension-heading';
+import { Gapcursor } from '@tiptap/extension-gapcursor';
 import type { Editor } from '@tiptap/react';
 import { useEffect, useState, useCallback } from 'react';
 import EditorToolbar from './EditorToolbar';
@@ -79,6 +80,7 @@ const TemplateEditor = ({
       FieldNameNode,
       MultiOptionNode,
       DragDropFieldExtension,
+      Gapcursor,
     ],
     content: content,
     editable: true,

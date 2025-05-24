@@ -30,12 +30,14 @@ export const DragDropFieldExtension = Extension.create({
 
               if (fieldType === 'field') {
                 const nodeId = `field-${Date.now()}`
-                const node = view.state.schema.nodes.fieldName.create({
-                  fieldName: 'Field',
-                  defaultText: '',
-                  nodeId,
-                })
-                tr.insert(pos, node)
+                const fieldNode = view.state.schema.nodes.fieldName.create(
+                  { fieldName: 'Field', defaultText: '', nodeId },
+                  view.state.schema.text('Field')
+                )
+                tr.insert(pos, fieldNode)
+                // Add a space after the field to ensure cursor can be placed after it
+                const spaceNode = view.state.schema.text(' ')
+                tr.insert(pos + fieldNode.nodeSize, spaceNode)
               } else if (fieldType === 'multi-option') {
                 const nodeId = `multi-${Date.now()}`
                 const node = view.state.schema.nodes.multiOption.create({
@@ -44,6 +46,9 @@ export const DragDropFieldExtension = Extension.create({
                   nodeId,
                 })
                 tr.insert(pos, node)
+                // Add a space after the field to ensure cursor can be placed after it
+                const spaceNode = view.state.schema.text(' ')
+                tr.insert(pos + node.nodeSize, spaceNode)
               }
 
               view.dispatch(tr)
