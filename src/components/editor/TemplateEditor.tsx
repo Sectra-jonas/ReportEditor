@@ -125,12 +125,12 @@ const TemplateEditor = ({
     
     if (field.type === 'field') {
       // @ts-ignore - Command exists but not in types
-      editor.chain().focus().updateFieldNode(field.nodeId, {
+      editor.chain().updateFieldNode(field.nodeId, {
         defaultText: field.defaultText || '',
       }).run();
     } else if (field.type === 'multi-option' && field.options) {
       // @ts-ignore - Command exists but not in types
-      editor.chain().focus().updateMultiOptionNode(field.nodeId, {
+      editor.chain().updateMultiOptionNode(field.nodeId, {
         options: field.options.map(opt => opt.text),
       }).run();
     }
@@ -165,7 +165,7 @@ const TemplateEditor = ({
 
   return (
     <div className="flex h-full">
-      <div className="flex flex-col flex-1 border border-input rounded-md shadow-sm">
+      <div className="flex flex-col flex-1 border border-slate-600 rounded-md shadow-sm bg-slate-800">
         <EditorToolbar editor={editor} />
         <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
       </div>

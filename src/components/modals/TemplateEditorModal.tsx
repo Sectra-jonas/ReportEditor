@@ -65,7 +65,7 @@ export const TemplateEditorModal = ({
             <DialogTitle>Report Template Editor</DialogTitle>
             <DialogDescription>
               Create, edit, load, and save report templates.
-              Drag fields from the sidebar or use <code>[FieldName]</code> for replaceable fields and <code>[Option1|Option2|Option3]</code> for multiple choice fields.
+              Drag fields from the sidebar to add them to your template. Click on any field to edit its properties in the sidebar.
             </DialogDescription>
           </DialogHeader>
           
