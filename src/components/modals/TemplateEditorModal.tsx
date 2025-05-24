@@ -60,12 +60,12 @@ export const TemplateEditorModal = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw] h-[80vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] h-[80vh] flex flex-col p-0">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle>Report Template Editor</DialogTitle>
             <DialogDescription>
               Create, edit, load, and save report templates.
-              Use <code>[FieldName]</code> for replaceable fields and <code>[Option1|Option2|Option3]</code> for multiple choice fields.
+              Drag fields from the sidebar or use <code>[FieldName]</code> for replaceable fields and <code>[Option1|Option2|Option3]</code> for multiple choice fields.
             </DialogDescription>
           </DialogHeader>
           
@@ -81,12 +81,14 @@ export const TemplateEditorModal = ({
             </Button>
           </div>
 
-          <div className="flex-grow overflow-hidden p-6 pt-2">
-            <TemplateEditor
-              content={currentTemplate?.content}
-              setEditorInstance={setTemplateEditor}
-              onUpdate={handleEditorUpdate}
-            />
+          <div className="flex-grow overflow-hidden">
+            <div className="h-full px-6 py-2">
+              <TemplateEditor
+                content={currentTemplate?.content}
+                setEditorInstance={setTemplateEditor}
+                onUpdate={handleEditorUpdate}
+              />
+            </div>
           </div>
 
           <DialogFooter className="p-6 pt-2 border-t">

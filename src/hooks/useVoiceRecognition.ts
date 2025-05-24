@@ -25,10 +25,14 @@ interface SpeechRecognition extends EventTarget {
   onstart: (() => void) | null;
 }
 
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition | undefined;
-    webkitSpeechRecognition: typeof SpeechRecognition | undefined;
+    SpeechRecognition: SpeechRecognitionConstructor | undefined;
+    webkitSpeechRecognition: SpeechRecognitionConstructor | undefined;
   }
 }
 

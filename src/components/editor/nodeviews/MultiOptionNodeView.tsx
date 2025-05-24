@@ -68,7 +68,9 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
         ${!editor.isEditable ? 'cursor-default opacity-80' : ''}
       `}
       draggable="true" 
-      data-drag-handle 
+      data-drag-handle
+      data-node-id={node.attrs.nodeId}
+      data-node-type="multi-option"
     >
       {isEditing ? (
         <input

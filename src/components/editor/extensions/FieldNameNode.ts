@@ -33,6 +33,20 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
           'data-field-name': attributes.fieldName,
         }),
       },
+      defaultText: {
+        default: '',
+        parseHTML: element => element.getAttribute('data-default-text'),
+        renderHTML: attributes => ({
+          'data-default-text': attributes.defaultText,
+        }),
+      },
+      nodeId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-node-id'),
+        renderHTML: attributes => ({
+          'data-node-id': attributes.nodeId,
+        }),
+      },
     };
   },
 
@@ -55,7 +69,8 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
   renderHTML({ HTMLAttributes, node }) {
     // Allow the content to be rendered and edited directly
     return ['span', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-      'data-type': 'field-name'
+      'data-type': 'field-name',
+      'data-node-type': 'field'
     }), 0]; // 0 means render the content
   },
   
@@ -82,5 +97,43 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
         },
       }),
     ];
+  },
+
+  addCommands() {
+    return {
+      insertField: (attributes?: { fieldName?: string; defaultText?: string; nodeId?: string }) => ({ commands }: any) => {
+        const nodeId = attributes?.nodeId || `field-${Date.now()}`;
+        const fieldName = attributes?.fieldName || 'Field';
+        const defaultText = attributes?.defaultText || '';
+        
+        return commands.insertContent({
+          type: this.name,
+          attrs: { fieldName, defaultText, nodeId },
+          content: [{ type: 'text', text: defaultText || fieldName }],
+        });
+      },
+
+      updateFieldNode: (nodeId: string, attrs: { fieldName?: string; defaultText?: string }) => ({ tr, state }: any) => {
+        let updated = false;
+        state.doc.descendants((node: any, pos: number) => {
+          if (node.type.name === 'fieldName' && node.attrs.nodeId === nodeId) {
+            const newAttrs = { ...node.attrs, ...attrs };
+            const newText = attrs.defaultText !== undefined ? attrs.defaultText : node.attrs.defaultText;
+            const displayText = newText || newAttrs.fieldName;
+            
+            // Create new node with updated content
+            const newNode = state.schema.nodes.fieldName.create(
+              newAttrs,
+              displayText ? state.schema.text(displayText) : null
+            );
+            
+            tr.replaceRangeWith(pos, pos + node.nodeSize, newNode);
+            updated = true;
+            return false; // stop iteration
+          }
+        });
+        return updated;
+      },
+    } as any;
   },
 });

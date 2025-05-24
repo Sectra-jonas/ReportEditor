@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Editor } from '@tiptapreact';
+import type { Editor } from '@tiptap/react';
 import {
   Bold, Italic, Underline, Heading1, Heading2, Heading3, Undo, Redo, Mic, MicOff, Pilcrow, List, ListOrdered, TableIcon as InsertTableIcon, Trash2 as DeleteTableIcon, PlusSquare as AddRowIcon, MinusSquare as DeleteRowIcon, Plus as AddColIcon, Minus as DeleteColIcon
 } from 'lucide-react';
