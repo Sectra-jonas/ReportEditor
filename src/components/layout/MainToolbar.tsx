@@ -81,7 +81,7 @@ export const MainToolbar = () => {
 
   return (
     <>
-      <div className="flex items-center space-x-2 p-3 border-b border-border bg-background shadow-sm flex-wrap gap-2">
+      <div className="flex items-center space-x-2 p-4 border border-border bg-card rounded-lg shadow-lg m-3 flex-wrap gap-2">
         <Button onClick={() => setIsNewReportDialogOpen(true)}>
           <FilePlus2 className="mr-2 h-4 w-4" /> New Report
         </Button>

@@ -38,6 +38,11 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
         parseHTML: element => element.getAttribute('data-current-value'),
         renderHTML: attributes => ({ 'data-current-value': attributes.currentValue }),
       },
+      nodeId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-node-id'),
+        renderHTML: attributes => ({ 'data-node-id': attributes.nodeId }),
+      },
     };
   },
 
@@ -66,6 +71,7 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
       'span',
       mergeAttributes(HTMLAttributes, { // Use raw HTMLAttributes from options for base
         'data-type': 'multi-option', // Ensure this is present for parsing
+        'data-node-type': 'multi-option',
         'data-options': node.attrs.options,
         'data-current-value': node.attrs.currentValue,
         class: 'multi-option-node-fallback-render bg-accent text-accent-foreground p-1 rounded-sm border border-input mx-0.5',
@@ -96,9 +102,60 @@ export const MultiOptionNode = Node.create<MultiOptionOptions>({
             tr.delete(start, end);
             const newNode = this.type.create({ options: optionsString, currentValue });
             tr.insert(start, newNode);
+            // Add a space after the field to ensure cursor can be placed after it
+            const spaceNode = state.schema.text(' ');
+            tr.insert(start + newNode.nodeSize, spaceNode);
           }
         },
       }),
     ];
+  },
+
+  addCommands() {
+    return {
+      insertMultiOption: (attributes?: { options?: string[]; currentValue?: string; nodeId?: string }) => ({ commands }: any) => {
+        const nodeId = attributes?.nodeId || `multi-${Date.now()}`;
+        const options = attributes?.options || ['Option 1', 'Option 2'];
+        const optionsString = options.join('|');
+        const currentValue = attributes?.currentValue || options[0];
+        
+        return commands.insertContent([
+          {
+            type: this.name,
+            attrs: { options: optionsString, currentValue, nodeId },
+          },
+          {
+            type: 'text',
+            text: ' ',
+          }
+        ]);
+      },
+
+      updateMultiOptionNode: (nodeId: string, attrs: { options?: string[]; currentValue?: string }) => ({ tr, state }: any) => {
+        let updated = false;
+        state.doc.descendants((node: any, pos: number) => {
+          if (node.type.name === 'multiOption' && node.attrs.nodeId === nodeId) {
+            const newAttrs = { ...node.attrs };
+            
+            if (attrs.options) {
+              newAttrs.options = attrs.options.join('|');
+              // If current value is not in new options, set to first option
+              if (!attrs.options.includes(node.attrs.currentValue)) {
+                newAttrs.currentValue = attrs.options[0] || '';
+              }
+            }
+            
+            if (attrs.currentValue !== undefined) {
+              newAttrs.currentValue = attrs.currentValue;
+            }
+            
+            tr.setNodeMarkup(pos, undefined, newAttrs);
+            updated = true;
+            return false; // stop iteration
+          }
+        });
+        return updated;
+      },
+    } as any;
   },
 });

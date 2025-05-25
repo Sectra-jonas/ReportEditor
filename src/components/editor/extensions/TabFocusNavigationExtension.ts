@@ -2,7 +2,7 @@
 import { Extension } from '@tiptap/core';
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import { NodeSelection } from 'prosemirror-state';
+import { NodeSelection, TextSelection } from 'prosemirror-state';
 
 interface FieldNodeInfo {
   pos: number;
@@ -68,15 +68,35 @@ export const TabFocusNavigationExtension = Extension.create({
         const nextField = fieldNodes[nextNodeIndex!];
         if (nextField) {
           editor.commands.setNodeSelection(nextField.pos);
-          const domNode = view.nodeDOM(nextField.pos) as HTMLElement;
-          if (domNode) {
-            if (nextField.node.type.name === 'multiOption') {
-              const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
-              trigger?.focus(); 
-            } else if (nextField.node.type.name === 'fieldName') {
-              view.focus(); // Ensure the editor view itself has focus for fieldName selection
+          
+          // Use setTimeout to ensure the DOM has updated after selection
+          setTimeout(() => {
+            const domNode = view.nodeDOM(nextField.pos) as HTMLElement;
+            if (domNode) {
+              if (nextField.node.type.name === 'multiOption') {
+                // For multi-option fields, trigger the popup by clicking the button
+                const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
+                if (trigger) {
+                  trigger.click(); // This will open the popup
+                }
+              } else if (nextField.node.type.name === 'fieldName') {
+                // For basic fields, select all text content
+                const fieldElement = domNode;
+                if (fieldElement) {
+                  // Create a text selection that covers the entire field content
+                  const start = nextField.pos + 1; // +1 to get inside the node
+                  const end = nextField.pos + nextField.node.nodeSize - 1; // -1 to stay inside
+                  
+                  // Set text selection to select all content
+                  const textSelection = TextSelection.create(editor.state.doc, start, end);
+                  const tr = editor.state.tr.setSelection(textSelection);
+                  view.dispatch(tr);
+                  view.focus();
+                }
+              }
             }
-          }
+          }, 0);
+          
           return true; 
         }
         return false;
@@ -133,15 +153,35 @@ export const TabFocusNavigationExtension = Extension.create({
         const prevField = fieldNodes[prevNodeIndex!];
         if (prevField) {
           editor.commands.setNodeSelection(prevField.pos);
-          const domNode = view.nodeDOM(prevField.pos) as HTMLElement;
-          if (domNode) {
-            if (prevField.node.type.name === 'multiOption') {
-              const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
-              trigger?.focus();
-            } else if (prevField.node.type.name === 'fieldName') {
-              view.focus(); // Ensure the editor view itself has focus
+          
+          // Use setTimeout to ensure the DOM has updated after selection
+          setTimeout(() => {
+            const domNode = view.nodeDOM(prevField.pos) as HTMLElement;
+            if (domNode) {
+              if (prevField.node.type.name === 'multiOption') {
+                // For multi-option fields, trigger the popup by clicking the button
+                const trigger = domNode.querySelector<HTMLElement>('[role="button"]');
+                if (trigger) {
+                  trigger.click(); // This will open the popup
+                }
+              } else if (prevField.node.type.name === 'fieldName') {
+                // For basic fields, select all text content
+                const fieldElement = domNode;
+                if (fieldElement) {
+                  // Create a text selection that covers the entire field content
+                  const start = prevField.pos + 1; // +1 to get inside the node
+                  const end = prevField.pos + prevField.node.nodeSize - 1; // -1 to stay inside
+                  
+                  // Set text selection to select all content
+                  const textSelection = TextSelection.create(editor.state.doc, start, end);
+                  const tr = editor.state.tr.setSelection(textSelection);
+                  view.dispatch(tr);
+                  view.focus();
+                }
+              }
             }
-          }
+          }, 0);
+          
           return true;
         }
         return false;

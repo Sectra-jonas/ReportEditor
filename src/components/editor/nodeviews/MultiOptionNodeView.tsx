@@ -13,7 +13,10 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState(-1);
+  const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popoverContentRef = useRef<HTMLDivElement>(null);
   
   const optionsString = node.attrs.options as string || "";
   const options = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
@@ -22,9 +25,21 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
   const handleSelectOption = useCallback((option: string) => {
     if (editor.isEditable) {
       updateAttributes({ currentValue: option });
+      
+      // Position cursor after this field for continued TAB navigation
+      setTimeout(() => {
+        const pos = getPos();
+        if (typeof pos === 'number') {
+          const endPos = pos + node.nodeSize;
+          editor.commands.focus();
+          editor.commands.setTextSelection(endPos);
+        }
+      }, 0);
     }
     setIsOpen(false);
-  }, [editor, updateAttributes]);
+    setSelectedOptionIndex(-1);
+    setIsKeyboardNavigation(false);
+  }, [editor, updateAttributes, getPos, node.nodeSize]);
 
   const handleStartEdit = useCallback(() => {
     if (editor.isEditable) {
@@ -51,12 +66,63 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
     }
   }, [handleFinishEdit]);
 
+  const handlePopoverKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!isOpen || options.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setIsKeyboardNavigation(true);
+        setSelectedOptionIndex(prev => 
+          prev < options.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setIsKeyboardNavigation(true);
+        setSelectedOptionIndex(prev => 
+          prev > 0 ? prev - 1 : options.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedOptionIndex >= 0 && selectedOptionIndex < options.length) {
+          handleSelectOption(options[selectedOptionIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setIsOpen(false);
+        setSelectedOptionIndex(-1);
+        setIsKeyboardNavigation(false);
+        break;
+    }
+  }, [isOpen, options, selectedOptionIndex, handleSelectOption]);
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
   }, [isEditing]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Reset keyboard navigation state when popup opens
+      setSelectedOptionIndex(-1);
+      setIsKeyboardNavigation(true);
+      
+      // Auto-focus the popup content for keyboard navigation
+      setTimeout(() => {
+        if (popoverContentRef.current) {
+          popoverContentRef.current.focus();
+        }
+      }, 0);
+    } else {
+      setSelectedOptionIndex(-1);
+      setIsKeyboardNavigation(false);
+    }
+  }, [isOpen]);
 
   if (!editor) return null;
 
@@ -68,7 +134,9 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
         ${!editor.isEditable ? 'cursor-default opacity-80' : ''}
       `}
       draggable="true" 
-      data-drag-handle 
+      data-drag-handle
+      data-node-id={node.attrs.nodeId}
+      data-node-type="multi-option"
     >
       {isEditing ? (
         <input
@@ -116,7 +184,12 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
               onOpenAutoFocus={(e) => e.preventDefault()} 
               onCloseAutoFocus={(e) => e.preventDefault()} 
             >
-              <div className="flex flex-col max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md">
+              <div 
+                ref={popoverContentRef}
+                className="flex flex-col max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md"
+                tabIndex={0}
+                onKeyDown={handlePopoverKeyDown}
+              >
                 <Button
                   variant="ghost"
                   size="sm"
@@ -129,17 +202,26 @@ export const MultiOptionNodeView: React.FC<NodeViewProps> = ({ editor, node, get
                 >
                   ✏️ Edit text...
                 </Button>
-                {options.length > 0 ? options.map((option) => (
+                {options.length > 0 ? options.map((option, index) => (
                   <Button
                     key={option}
                     variant="ghost"
                     size="sm"
-                    className="justify-start rounded-none"
+                    className={`justify-start rounded-none ${
+                      isKeyboardNavigation && selectedOptionIndex === index 
+                        ? 'bg-accent text-accent-foreground' 
+                        : ''
+                    }`}
                     onClick={(e) => {
                       e.preventDefault(); 
                       handleSelectOption(option);
                     }}
                     onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => {
+                      if (!isKeyboardNavigation) {
+                        setSelectedOptionIndex(index);
+                      }
+                    }}
                   >
                     {option}
                   </Button>

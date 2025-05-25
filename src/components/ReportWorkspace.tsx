@@ -59,15 +59,17 @@ const ReportWorkspace = () => {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <MainToolbar />
-      <div className="flex flex-col flex-grow p-4 md:p-6 lg:p-8 overflow-hidden">
-        <div className="flex flex-col flex-grow border border-input rounded-lg shadow-xl bg-card">
+      <div className="flex flex-col flex-grow p-4 md:p-6 lg:p-8 overflow-hidden space-y-4">
+        <div className="mb-2">
           <EditorToolbar
             editor={editor}
             isVoiceActive={isListening}
             onToggleVoice={isSupported && editor?.isEditable ? toggleListening : undefined}
             disableControls={!currentReport}
           />
-          <div className="flex-grow h-full overflow-y-auto">
+        </div>
+        <div className="flex flex-col flex-grow border-2 border-border rounded-lg shadow-xl bg-card">
+          <div className="flex-grow h-full overflow-y-auto p-1">
             <RichTextEditor
               key={currentReport ? currentReport.id : 'no-report'} // Key change to force remount
               content={currentReport?.content || ''}
@@ -75,7 +77,7 @@ const ReportWorkspace = () => {
               onUpdate={handleEditorUpdate}
               editable={!!currentReport}
               placeholder="Start your radiology report here... Use [FieldName] or [OptionA|OptionB] for template fields."
-              className="min-h-[calc(100vh-220px)] rounded-t-none"
+              className="min-h-[calc(100vh-220px)] rounded-lg"
             />
           </div>
         </div>
