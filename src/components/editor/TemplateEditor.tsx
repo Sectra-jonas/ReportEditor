@@ -50,50 +50,7 @@ const TemplateEditor = ({
 
   const [selectedNodeInfo, setSelectedNodeInfoInternal] = useState<SelectedNodeInfo | null>(null);
 
-  // Effect to notify parent when selectedNodeInfo changes
-  useEffect(() => {
-    if (onNodeSelectionChange) {
-      onNodeSelectionChange(selectedNodeInfo);
-    }
-  }, [selectedNodeInfo, onNodeSelectionChange]);
-
-
-  const handleUpdateNodeAttributes = useCallback((fieldId: string, newAttrs: Record<string, any>) => {
-    if (!editor) return;
-    let targetNodePos: { pos: number; node: PMNode } | null = null;
-    editor.state.doc.descendants((node, pos) => {
-      if (node.attrs.fieldId === fieldId) {
-        targetNodePos = { pos, node };
-        return false; // stop iteration
-      }
-      return true;
-    });
-    if (targetNodePos) {
-      editor.chain().focus().setNodeMarkup(targetNodePos.pos, undefined, { ...targetNodePos.node.attrs, ...newAttrs }).run();
-      const updatedNode = editor.state.doc.nodeAt(targetNodePos.pos);
-      if (updatedNode) {
-        setSelectedNodeInfoInternal({ // Update internal state, which triggers onNodeSelectionChange
-          id: fieldId,
-          type: updatedNode.type.name,
-          attrs: { ...updatedNode.attrs },
-          pos: targetNodePos.pos,
-        });
-      }
-    }
-  }, [editor, setSelectedNodeInfoInternal]); // Added editor and setSelectedNodeInfoInternal to dependency array
-
-  // Expose handleUpdateNodeAttributes via the exposeFunctions prop
-  useEffect(() => {
-    if (exposeFunctions && editor) { // Check if editor is initialized
-      exposeFunctions({ updateNodeAttributes: handleUpdateNodeAttributes });
-    }
-    // Optional: If editor becomes null later and functions should be revoked
-    // else if (exposeFunctions) {
-    //   exposeFunctions({ updateNodeAttributes: () => console.warn("Editor not available") });
-    // }
-  }, [exposeFunctions, handleUpdateNodeAttributes, editor]); // Added editor to dependency array
-
-
+  // Initialize useEditor hook first
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -268,20 +225,59 @@ const TemplateEditor = ({
     },
   });
 
+  // Now define callbacks and effects that might depend on 'editor'
+
+  // Effect to notify parent when selectedNodeInfo changes
+  useEffect(() => {
+    if (onNodeSelectionChange) {
+      onNodeSelectionChange(selectedNodeInfo);
+    }
+  }, [selectedNodeInfo, onNodeSelectionChange]);
+
+  const handleUpdateNodeAttributes = useCallback((fieldId: string, newAttrs: Record<string, any>) => {
+    if (!editor) return; // Guard against editor not being initialized
+    let targetNodePos: { pos: number; node: PMNode } | null = null;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.attrs.fieldId === fieldId) {
+        targetNodePos = { pos, node };
+        return false; // stop iteration
+      }
+      return true;
+    });
+    if (targetNodePos) {
+      editor.chain().focus().setNodeMarkup(targetNodePos.pos, undefined, { ...targetNodePos.node.attrs, ...newAttrs }).run();
+      const updatedNode = editor.state.doc.nodeAt(targetNodePos.pos);
+      if (updatedNode) {
+        setSelectedNodeInfoInternal({ // Update internal state, which triggers onNodeSelectionChange
+          id: fieldId,
+          type: updatedNode.type.name,
+          attrs: { ...updatedNode.attrs },
+          pos: targetNodePos.pos,
+        });
+      }
+    }
+  }, [editor, setSelectedNodeInfoInternal]);
+
+  // Expose handleUpdateNodeAttributes via the exposeFunctions prop
+  useEffect(() => {
+    if (exposeFunctions && editor) { // Check if editor is initialized
+      exposeFunctions({ updateNodeAttributes: handleUpdateNodeAttributes });
+    }
+  }, [exposeFunctions, handleUpdateNodeAttributes, editor]);
+
   // This effect is to pass the editor instance to the parent
   useEffect(() => {
-    if (setEditorInstance) {
+    if (setEditorInstance && editor) { // Guard editor here
       setEditorInstance(editor);
     }
     return () => {
-      if (setEditorInstance) {
+      if (setEditorInstance) { // No need to check editor on cleanup if we only set it when it exists
         setEditorInstance(null);
       }
     };
-  }, [editor, setEditorInstance]); // Removed handleUpdateNodeAttributes from dependency array
+  }, [editor, setEditorInstance]);
 
-
-  // Content update logic remains the same
+  // Content update logic, ensuring editor is guarded
   useEffect(() => {
     if (editor && content !== undefined) {
       const currentContent = editor.getHTML();
@@ -292,7 +288,7 @@ const TemplateEditor = ({
             editor.commands.setContent(content, false);
         }
       }
-    } else if (editor && content === undefined) {
+    } else if (editor && content === undefined) { // Also guard editor here
       editor.commands.clearContent(false);
     }
   }, [content, editor]);
