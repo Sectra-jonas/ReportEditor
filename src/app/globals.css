@@ -43,37 +43,37 @@ body {
     --sidebar-ring: 205 100% 48%;
   }
   .dark {
-    --background: 222 84% 4.9%; /* Very Dark Navy */
+    --background: 215 20% 15%; /* Much brighter main background */
     --foreground: 210 40% 98%; /* Crisp White */
-    --card: 222 84% 6%; 
+    --card: 215 15% 20%; /* Brighter card background */
     --card-foreground: 210 40% 98%;
-    --popover: 222 84% 5%;
+    --popover: 215 15% 22%; /* Even brighter popover for dialogs */
     --popover-foreground: 210 40% 98%;
     --primary: 210 100% 70%; /* Professional Bright Blue */
-    --primary-foreground: 222 84% 4.9%;
-    --secondary: 217 32% 17%; 
+    --primary-foreground: 215 20% 15%;
+    --secondary: 215 15% 30%; /* Much brighter secondary for excellent button visibility */
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 32% 12%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 215 10% 25%; /* Brighter muted backgrounds */
+    --muted-foreground: 215 15% 75%; /* Excellent contrast for muted text */
     --accent: 210 100% 70%; /* Matching primary for consistency */
-    --accent-foreground: 222 84% 4.9%;
+    --accent-foreground: 215 20% 15%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 32% 17%;
-    --input: 217 32% 17%;
+    --border: 215 15% 35%; /* Very visible borders */
+    --input: 215 15% 30%; /* Bright input backgrounds */
     --ring: 210 100% 70%;
     --chart-1: 210 100% 70%;
     --chart-2: 200 90% 60%;
     --chart-3: 220 85% 65%;
     --chart-4: 190 95% 55%;
     --chart-5: 240 80% 70%;
-    --sidebar-background: 222 84% 5.5%;
+    --sidebar-background: 215 15% 18%; /* Brighter sidebar */
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 210 100% 70%;
-    --sidebar-primary-foreground: 222 84% 4.9%;
-    --sidebar-accent: 217 32% 15%;
+    --sidebar-primary-foreground: 215 20% 15%;
+    --sidebar-accent: 215 10% 28%; /* Much more visible sidebar elements */
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 32% 15%;
+    --sidebar-border: 215 15% 35%; /* Very visible sidebar borders */
     --sidebar-ring: 210 100% 70%;
   }
 }
@@ -94,6 +94,47 @@ body {
   /* Enhanced shadows for professional look */
   .shadow-professional {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Enhanced UI separation */
+  .ui-section {
+    @apply bg-card border border-border rounded-lg shadow-lg;
+  }
+  
+  .toolbar-section {
+    @apply bg-secondary border border-border rounded-lg shadow-md;
+  }
+  
+  /* Custom heading styles with less dramatic size differences */
+  .prose h1 {
+    font-size: 1.5rem !important; /* 24px instead of default ~36px */
+    line-height: 1.4 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    font-weight: 600 !important;
+  }
+  
+  .prose h2 {
+    font-size: 1.25rem !important; /* 20px instead of default ~30px */
+    line-height: 1.4 !important;
+    margin-top: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: 600 !important;
+  }
+  
+  .prose h3 {
+    font-size: 1.125rem !important; /* 18px instead of default ~24px */
+    line-height: 1.4 !important;
+    margin-top: 1rem !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: 600 !important;
+  }
+  
+  .prose p {
+    font-size: 1rem !important; /* 16px base size */
+    line-height: 1.5 !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
   }
   
   /* Smooth transitions for professional feel */

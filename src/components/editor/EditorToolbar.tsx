@@ -30,7 +30,7 @@ const EditorToolbar = ({ editor, isVoiceActive, onToggleVoice, disableControls =
 
   if (!editor) {
     return ( 
-      <div className="flex items-center space-x-1 p-2 border-b border-border bg-card rounded-t-md flex-wrap gap-1 opacity-50 cursor-not-allowed">
+      <div className="flex items-center space-x-1 p-3 border border-border bg-secondary rounded-lg shadow-md flex-wrap gap-1 opacity-50 cursor-not-allowed">
         <Toggle size="sm" disabled aria-label="Toggle bold"><Bold className="h-4 w-4" /></Toggle>
         <Toggle size="sm" disabled aria-label="Toggle italic"><Italic className="h-4 w-4" /></Toggle>
         {/* ... other disabled controls ... */}
@@ -48,7 +48,7 @@ const EditorToolbar = ({ editor, isVoiceActive, onToggleVoice, disableControls =
 
   return (
     <>
-      <div className="flex items-center space-x-1 p-2 border-b border-border bg-card rounded-t-lg flex-wrap gap-1">
+      <div className="flex items-center space-x-1 p-3 border border-border bg-secondary rounded-lg shadow-md flex-wrap gap-1">
         <Toggle
           size="sm"
           pressed={editor.isActive('bold')}
@@ -87,21 +87,21 @@ const EditorToolbar = ({ editor, isVoiceActive, onToggleVoice, disableControls =
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem 
-              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} 
+              onClick={() => editor.chain().focus().setHeading({ level: 1 }).run()} 
               className={editor.isActive('heading', { level: 1 }) ? 'bg-accent' : ''}
               disabled={isDisabled}
             >
               <Heading1 className="h-4 w-4 mr-2" /> Heading 1
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
+              onClick={() => editor.chain().focus().setHeading({ level: 2 }).run()} 
               className={editor.isActive('heading', { level: 2 }) ? 'bg-accent' : ''}
               disabled={isDisabled}
             >
               <Heading2 className="h-4 w-4 mr-2" /> Heading 2
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} 
+              onClick={() => editor.chain().focus().setHeading({ level: 3 }).run()} 
               className={editor.isActive('heading', { level: 3 }) ? 'bg-accent' : ''}
               disabled={isDisabled}
             >
