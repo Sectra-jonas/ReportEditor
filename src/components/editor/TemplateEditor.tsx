@@ -88,7 +88,7 @@ const TemplateEditor = ({
 
   return (
     <div className="flex flex-col h-full border border-input rounded-md shadow-sm">
-      <EditorToolbar editor={editor} />
+      {editor && <EditorToolbar editor={editor} />}
       <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
     </div>
   );
