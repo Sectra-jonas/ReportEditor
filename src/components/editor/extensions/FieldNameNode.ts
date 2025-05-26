@@ -1,5 +1,7 @@
 
 import { Node, mergeAttributes, InputRule } from '@tiptap/core';
+import { Selection, Plugin, PluginKey } from '@tiptap/pm/state';
+import { keymap } from '@tiptap/pm/keymap';
 
 export interface FieldNameOptions {
   HTMLAttributes: Record<string, any>;
@@ -11,15 +13,17 @@ const fieldNameInputRuleRegex = /\[([^[\]]+)\]$/;
 export const FieldNameNode = Node.create<FieldNameOptions>({
   name: 'fieldName',
   group: 'inline', 
-  content: 'text*', // Allows text content to be editable
+  content: 'inline*', // Allows inline content including hard breaks
   inline: true,
   selectable: true,
   atom: false, // Allow content to be editable
+  marks: '', // Disable marks inside field
 
   addOptions() {
     return {
       HTMLAttributes: {
-        class: 'field-name-node bg-accent hover:bg-primary/80 p-1 rounded-sm border border-input mx-0.5 text-accent-foreground cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+        class: 'field-name-node inline-block bg-accent hover:bg-primary/80 p-1 rounded-sm border border-input mx-0.5 text-accent-foreground cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+        style: 'white-space: pre-wrap; word-break: break-word;',
       },
     };
   },
@@ -68,10 +72,14 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
 
   renderHTML({ HTMLAttributes, node }) {
     // Allow the content to be rendered and edited directly
-    return ['span', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+    const attrs = mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
       'data-type': 'field-name',
-      'data-node-type': 'field'
-    }), 0]; // 0 means render the content
+      'data-node-type': 'field',
+      // Use inline-block with special styling for multiline support
+      style: 'display: inline; box-decoration-break: clone; -webkit-box-decoration-break: clone; background-color: hsl(var(--accent)); padding: 0.25rem 0.5rem; border-radius: 0.125rem; border: 1px solid hsl(var(--input)); margin: 0 0.125rem; line-height: 1.8;'
+    });
+    
+    return ['span', attrs, 0]; // 0 means render the content
   },
 
   
@@ -147,4 +155,5 @@ export const FieldNameNode = Node.create<FieldNameOptions>({
       },
     } as any;
   },
+
 });

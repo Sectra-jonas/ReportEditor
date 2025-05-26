@@ -210,4 +210,22 @@ body {
   .dark .prose td {
     border-color: hsl(var(--muted-foreground)); /* Uses a light gray from the theme variables */
   }
+
+  /* Multiline field support */
+  .field-name-node {
+    /* box-decoration-break creates separate boxes for each line */
+    box-decoration-break: clone !important;
+    -webkit-box-decoration-break: clone !important;
+  }
+
+  /* Override hover state from the class attribute */
+  .field-name-node:hover {
+    background-color: hsl(var(--primary) / 0.8) !important;
+  }
+
+  /* Handle focus states with better visibility */
+  .field-name-node:focus-within {
+    outline: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px hsl(var(--ring) / 0.2) !important;
+  }
 }

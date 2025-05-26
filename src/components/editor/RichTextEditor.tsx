@@ -19,6 +19,7 @@ import { MultiOptionNode } from './extensions/MultiOptionNode';
 // import { MultiOptionNodeView } from './nodeviews/MultiOptionNodeView'; // Important for ReactNodeViewRenderer - MultiOptionNode handles its own NodeView
 import { TabFocusNavigationExtension } from './extensions/TabFocusNavigationExtension';
 import { AIGeneratedNode } from './extensions/AIGeneratedNode';
+import { FieldEnterHandler } from './extensions/FieldEnterHandler';
 
 
 interface RichTextEditorProps {
@@ -39,10 +40,12 @@ const RichTextEditor = ({
   className
 }: RichTextEditorProps) => {
   const editor = useEditor({
+    immediatelyRender: false, // Fix SSR hydration issue
     extensions: [
       StarterKit.configure({
         heading: false, // Use custom Heading extension for specific levels
         history: {},
+        hardBreak: false, // Disable default hardBreak to avoid conflicts
       }),
       Underline,
       Placeholder.configure({
@@ -51,6 +54,7 @@ const RichTextEditor = ({
       Heading.configure({
         levels: [1, 2, 3],
       }),
+      FieldEnterHandler, // Add this before FieldNameNode to ensure proper priority
       FieldNameNode,
       MultiOptionNode.configure({
         // NodeView is configured directly in MultiOptionNode.ts via addNodeView
