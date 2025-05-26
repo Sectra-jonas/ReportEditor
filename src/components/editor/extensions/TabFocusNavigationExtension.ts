@@ -12,7 +12,7 @@ interface FieldNodeInfo {
 const findFieldNodes = (editor: Editor): FieldNodeInfo[] => {
   const nodes: FieldNodeInfo[] = [];
   editor.state.doc.descendants((node, pos) => {
-    if (node.type.name === 'fieldName' || node.type.name === 'multiOption') {
+    if (node.type.name === 'fieldName' || node.type.name === 'multiOption' || node.type.name === 'multiLineField') {
       nodes.push({ pos, node });
     }
   });
@@ -93,6 +93,13 @@ export const TabFocusNavigationExtension = Extension.create({
                   view.dispatch(tr);
                   view.focus();
                 }
+              } else if (nextField.node.type.name === 'multiLineField') {
+                // For multi-line fields, focus on the first paragraph
+                const firstParagraphPos = nextField.pos + 1; // +1 to get inside the field
+                const textSelection = TextSelection.create(editor.state.doc, firstParagraphPos + 1); // +1 to get inside the paragraph
+                const tr = editor.state.tr.setSelection(textSelection);
+                view.dispatch(tr);
+                view.focus();
               }
             }
           }, 0);
@@ -178,6 +185,13 @@ export const TabFocusNavigationExtension = Extension.create({
                   view.dispatch(tr);
                   view.focus();
                 }
+              } else if (prevField.node.type.name === 'multiLineField') {
+                // For multi-line fields, focus on the first paragraph
+                const firstParagraphPos = prevField.pos + 1; // +1 to get inside the field
+                const textSelection = TextSelection.create(editor.state.doc, firstParagraphPos + 1); // +1 to get inside the paragraph
+                const tr = editor.state.tr.setSelection(textSelection);
+                view.dispatch(tr);
+                view.focus();
               }
             }
           }, 0);

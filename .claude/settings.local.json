@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm run typecheck:*)",
       "Bash(npm run lint)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }

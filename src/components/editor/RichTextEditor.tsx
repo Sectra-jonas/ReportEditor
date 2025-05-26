@@ -15,6 +15,7 @@ import { useEffect } from 'react';
 
 // Custom Extensions
 import { FieldNameNode } from './extensions/FieldNameNode';
+import { MultiLineFieldNode } from './extensions/MultiLineFieldNode';
 import { MultiOptionNode } from './extensions/MultiOptionNode';
 // import { MultiOptionNodeView } from './nodeviews/MultiOptionNodeView'; // Important for ReactNodeViewRenderer - MultiOptionNode handles its own NodeView
 import { TabFocusNavigationExtension } from './extensions/TabFocusNavigationExtension';
@@ -52,6 +53,7 @@ const RichTextEditor = ({
         levels: [1, 2, 3],
       }),
       FieldNameNode,
+      MultiLineFieldNode,
       MultiOptionNode.configure({
         // NodeView is configured directly in MultiOptionNode.ts via addNodeView
       }),
